@@ -95,7 +95,7 @@ mod tests {
             "
         };
 
-        // assert_eq!(calibrate(input), 142);
+        assert_eq!(calibrate(input), 142);
         let input = indoc! {
             "
                 two1nine
