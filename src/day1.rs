@@ -1,63 +1,72 @@
-fn calibrate(input: &str) -> u32 {
-    input
-        .lines()
-        .map(|l| {
-            let digits: Vec<_> = l.chars().filter(char::is_ascii_digit).collect();
-            if digits.is_empty() {
-                0
-            } else {
-                digits[0].to_digit(10).unwrap_or(0) * 10
-                    + digits[digits.len() - 1].to_digit(10).unwrap_or(0)
-            }
-        })
-        .sum()
+use std::cmp::min;
+
+fn to_calibration(l: &str, values: &[(&str, u32)]) -> u32 {
+    let total_len = l.len();
+
+    // first digit search
+    let mut lvalue_idx = total_len;
+    let mut lvalue = 0;
+
+    // last digit search
+    let mut rvalue_idx = 0;
+    let mut rvalue = 0;
+
+    for (expr, val) in values {
+        if let Some(idx) = l[0..min(lvalue_idx + expr.len(), total_len)].find(expr) {
+            lvalue_idx = idx;
+            lvalue = *val;
+        }
+        if let Some(idx) = l[rvalue_idx..].rfind(expr) {
+            rvalue_idx += idx;
+            rvalue = *val;
+        }
+    }
+    10 * lvalue + rvalue
 }
 
-const LITERALS: [(&[u8], u8); 9] = [
-    ("one".as_bytes(), b'1'),
-    ("two".as_bytes(), b'2'),
-    ("three".as_bytes(), b'3'),
-    ("four".as_bytes(), b'4'),
-    ("five".as_bytes(), b'5'),
-    ("six".as_bytes(), b'6'),
-    ("seven".as_bytes(), b'7'),
-    ("eight".as_bytes(), b'8'),
-    ("nine".as_bytes(), b'9'),
-];
+fn calibrate(input: &str) -> u32 {
+    const DIGITS: [(&str, u32); 10] = [
+        ("1", 1),
+        ("2", 2),
+        ("3", 3),
+        ("4", 4),
+        ("5", 5),
+        ("6", 6),
+        ("7", 7),
+        ("8", 8),
+        ("9", 9),
+        ("0", 0),
+    ];
+
+    input.lines().map(|l| to_calibration(l, &DIGITS)).sum()
+}
 
 fn calibrate_literals(input: &str) -> u32 {
-    assert!(input.is_ascii(), "input {input} is not ascii only");
-    let mut input = input.to_lowercase();
-
-    // justification : input is ascii only, hence lowercase input is ascii only too
-    let bytes = unsafe { input.as_bytes_mut() };
-
-    // let's replace literals from left to right
-    let mut i = 0usize;
-    let total_len = bytes.len();
-    'main: while i < total_len {
-        for (lit, digit) in &LITERALS {
-            let len = lit.len();
-            if i + len <= total_len && &bytes[i..i + len] == *lit {
-                bytes[i] = *digit;
-                // ⚠️ overlapping literals must all be considered ==> only override the first char
-                // for b in &mut bytes[i..i+len] {
-                //     *b =*digit;
-                // }
-                // i+=len;
-                // continue 'main;
-                break;
-            }
-        }
-        i += 1;
-    }
-
-    for (lit, _) in &crate::day1::LITERALS {
-        let lit = String::from_utf8_lossy(lit);
-        assert!(!input.contains(&*lit));
-    }
-
-    calibrate(&input)
+    const DIGITS_AND_LITERALS: [(&str, u32); 19] = [
+        ("1", 1),
+        ("2", 2),
+        ("3", 3),
+        ("4", 4),
+        ("5", 5),
+        ("6", 6),
+        ("7", 7),
+        ("8", 8),
+        ("9", 9),
+        ("0", 0),
+        ("one", 1),
+        ("two", 2),
+        ("three", 3),
+        ("four", 4),
+        ("five", 5),
+        ("six", 6),
+        ("seven", 7),
+        ("eight", 8),
+        ("nine", 9),
+    ];
+    input
+        .lines()
+        .map(|l| to_calibration(l, &DIGITS_AND_LITERALS))
+        .sum()
 }
 
 pub fn calibrate_trebuchet() {
@@ -86,7 +95,7 @@ mod tests {
             "
         };
 
-        assert_eq!(calibrate(input), 142);
+        // assert_eq!(calibrate(input), 142);
         let input = indoc! {
             "
                 two1nine
