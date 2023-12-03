@@ -1,4 +1,4 @@
-use eyre::{eyre, Error};
+use eyre::{eyre, Error, Result, WrapErr};
 use std::str::FromStr;
 
 #[derive(Debug)]
@@ -52,7 +52,9 @@ impl FromStr for CubesSet {
             .collect();
 
         let mut result = [0; COLOR_VARIANT_COUNT];
-        for (color, count) in cube_counts? {
+        for (color, count) in
+            cube_counts.wrap_err_with(|| format!("failed to extract cubeSet from '{s}'"))?
+        {
             result[color as usize] += count;
         }
         Ok(CubesSet(result))
@@ -63,13 +65,18 @@ impl FromStr for Game {
     type Err = Error;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let (id, rounds) = s
+        let (raw_id, raw_rounds) = s
             .split_once(':')
             .ok_or_else(|| eyre!("no game id delimiter in {s}"))?;
-        let id: u32 = id.trim().replace("Game ", "").parse()?;
+        let id: u32 = raw_id
+            .trim()
+            .replace("Game ", "")
+            .parse()
+            .wrap_err_with(|| format!("failed to parse game id from '{raw_id}'"))?;
         let rounds: Result<Vec<CubesSet>, _> =
-            rounds.split(';').map(|round| round.parse()).collect();
-        let rounds = rounds?;
+            raw_rounds.split(';').map(|round| round.parse()).collect();
+        let rounds =
+            rounds.wrap_err_with(|| format!("failed to parse game rounds from {raw_rounds}"))?;
 
         Ok(Self { id, rounds })
     }
@@ -140,7 +147,7 @@ mod tests {
     use indoc::indoc;
 
     #[test]
-    fn possible_games_can_be_summed() {
+    fn possible_games_can_be_summed() -> Result<()> {
         let input = indoc! {"
             Game 1: 3 blue, 4 red; 1 red, 2 green, 6 blue; 2 green
             Game 2: 1 blue, 2 green; 3 green, 4 blue, 1 red; 1 green, 1 blue
@@ -148,9 +155,11 @@ mod tests {
             Game 4: 1 green, 3 red, 6 blue; 3 green, 6 red; 3 green, 15 blue, 14 red
             Game 5: 6 red, 1 blue, 3 green; 2 blue, 1 red, 2 green
         "};
-        let games = parse_games(input).unwrap();
+        let games = parse_games(input)?;
 
         assert_eq!(8, sum_possible_games(&games));
         assert_eq!(2286, sum_games_power(&games));
+
+        Ok(())
     }
 }
