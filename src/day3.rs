@@ -40,6 +40,13 @@ impl EngineSymbol {
 
         true
     }
+
+    pub fn try_to_number(&self) -> Option<u32> {
+        match self {
+            EngineSymbol::Number { val, .. } => Some(*val),
+            EngineSymbol::Symbol { .. } => None,
+        }
+    }
 }
 
 #[derive(Debug)]
@@ -109,18 +116,16 @@ impl EngineSchema {
     }
 }
 
-fn get_part_numbers_sum(input: &str) -> u32 {
-    let schema: EngineSchema = input.parse().unwrap();
-    for s in &schema.symbols {
-        println!("- {s:?}");
-    }
-
+fn get_part_numbers_sum(schema: &EngineSchema) -> u32 {
     schema
         .symbols
         .iter()
-        .filter_map(| n| match n {
+        .filter_map(|n| match n {
             EngineSymbol::Number { val, .. } => {
-                if !dbg!(schema.get_adjacent_symbol(n, |s| matches!(s, EngineSymbol::Symbol { .. }))).is_empty(){
+                if !schema
+                    .get_adjacent_symbol(n, |s| matches!(s, EngineSymbol::Symbol { .. }))
+                    .is_empty()
+                {
                     Some(*val)
                 } else {
                     None
@@ -131,16 +136,7 @@ fn get_part_numbers_sum(input: &str) -> u32 {
         .sum()
 }
 
-fn to_number(symbol: &EngineSymbol) -> Option<u32> {
-    match symbol {
-        EngineSymbol::Number { val, .. } => Some(*val),
-        EngineSymbol::Symbol { .. } => None,
-    }
-}
-
-fn sum_gear_ratios(input: &str) -> u32 {
-    let schema: EngineSchema = input.parse().unwrap();
-
+fn sum_gear_ratios(schema: &EngineSchema) -> u32 {
     schema
         .symbols
         .iter()
@@ -149,10 +145,14 @@ fn sum_gear_ratios(input: &str) -> u32 {
                 let ratios =
                     schema.get_adjacent_symbol(n, |s| matches!(s, EngineSymbol::Number { .. }));
                 if ratios.len() != 2 {
-                    println!("rejected {n:?} : {}", ratios.len());
                     None
                 } else {
-                    Some(ratios.iter().filter_map(to_number).product::<u32>())
+                    Some(
+                        ratios
+                            .iter()
+                            .filter_map(EngineSymbol::try_to_number)
+                            .product::<u32>(),
+                    )
                 }
             }
             _ => None,
@@ -163,10 +163,12 @@ fn sum_gear_ratios(input: &str) -> u32 {
 pub fn calibrate_engine() {
     let input = include_str!("../resources/day3_schema.txt");
 
-    let parts_sum = get_part_numbers_sum(input);
+    let schema: EngineSchema = input.parse().unwrap();
+
+    let parts_sum = get_part_numbers_sum(&schema);
     println!("parts number sum : {parts_sum}");
 
-    let gear_ratios = sum_gear_ratios(input);
+    let gear_ratios = sum_gear_ratios(&schema);
     println!("gear ratios sum : {gear_ratios}");
 }
 
@@ -189,8 +191,9 @@ mod tests {
             ...$.*....
             .664.598..
         "};
-        let part_number_sum = get_part_numbers_sum(input);
+        let schema: EngineSchema = input.parse().unwrap();
+        let part_number_sum = get_part_numbers_sum(&schema);
         assert_eq!(4361, part_number_sum);
-        assert_eq!(467835, sum_gear_ratios(input));
+        assert_eq!(467835, sum_gear_ratios(&schema));
     }
 }
