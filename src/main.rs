@@ -1,6 +1,7 @@
 mod day1;
 mod day2;
 mod day3;
+mod day4;
 
 fn main() {
     println!("*** day 1 *** ");
@@ -9,4 +10,7 @@ fn main() {
     day2::play_with_cubes();
     println!("*** day 3 *** ");
     day3::calibrate_engine();
+
+    println!("*** day4 ***");
+    day4::play_cards();
 }
