@@ -11,23 +11,22 @@ use itertools::Itertools;
 /// (T+sqrt(delta))/2 et (T-sqrt(delta))/2  nombre de valeur : sqrt(delta)
 
 fn compute_margins(time: u64, distance: u64) -> u64 {
+    // ⚠️ the f64 optimised version could be wrong for large values (because inner repr)
+    // brute force original :
+    // (1..time).map(|tacc|time*tacc - tacc*tacc).filter(|d|*d > distance).count() as u64
+
     let delta: f64 = (time * time - 4 * distance) as f64;
     assert!(delta > 0.0);
+    let delta_sqrt = delta.sqrt();
     let ftime = time as f64;
 
-    let min_val = ((ftime - delta.sqrt()) / 2.0).ceil() as u64;
-    let max_val = ((ftime + delta.sqrt()) / 2.0).floor() as u64;
+    let min_val = ((ftime - delta_sqrt) / 2.0).ceil() as u64;
+    let max_val = ((ftime + delta_sqrt) / 2.0).floor() as u64;
 
-    // remove extremities in case of exact match
-    1 + (if time * max_val - max_val * max_val > distance {
-        max_val
-    } else {
-        max_val - 1
-    }) - (if time * min_val - min_val * min_val > distance {
-        min_val
-    } else {
-        min_val + 1
-    })
+    // if delta_sqrt is an int, equation have int solutions, hence range extremities distance match exacty the input distance
+    // thus must be put away
+    let exact_result = delta_sqrt == delta_sqrt.floor();
+    1 + max_val - min_val - if exact_result { 2 } else { 0 }
 }
 
 fn multiply_race_margins(input: &str) -> u64 {
