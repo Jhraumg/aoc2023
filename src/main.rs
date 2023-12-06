@@ -3,6 +3,7 @@ mod day2;
 mod day3;
 mod day4;
 mod day5;
+mod day6;
 
 fn main() {
     println!("*** day 1 *** ");
@@ -17,4 +18,7 @@ fn main() {
 
     println!("*** day5 ***");
     day5::process_seed();
+
+    println!("*** day6 ***");
+    day6::race_boat();
 }
