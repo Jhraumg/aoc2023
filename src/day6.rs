@@ -50,20 +50,10 @@ fn multiply_race_margins(input: &str) -> u64 {
 fn compute_single_race_margins(input: &str) -> u64 {
     let mut lines = input.lines().filter(|l| !l.is_empty());
     let (_, times) = lines.next().unwrap().split_once(':').unwrap();
-    let time: u64 = times
-        .split(' ')
-        .filter(|w| !w.is_empty())
-        .join("")
-        .parse()
-        .unwrap();
+    let time: u64 = times.split(' ').join("").parse().unwrap();
 
     let (_, distances) = lines.next().unwrap().split_once(':').unwrap();
-    let distance: u64 = distances
-        .split(' ')
-        .filter(|w| !w.is_empty())
-        .join("")
-        .parse()
-        .unwrap();
+    let distance: u64 = distances.split(' ').join("").parse().unwrap();
 
     compute_margins(time, distance)
 }
