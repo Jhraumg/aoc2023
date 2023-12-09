@@ -6,6 +6,7 @@ mod day5;
 mod day6;
 mod day7;
 mod day8;
+mod day9;
 
 fn main() {
     println!("*** day 1 *** ");
@@ -29,4 +30,7 @@ fn main() {
 
     println!("*** day8 ***");
     day8::cross_desert();
+
+    println!("*** dayµ9 ***");
+    day9::observe_oasis();
 }
