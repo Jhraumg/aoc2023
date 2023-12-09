@@ -1,8 +1,6 @@
 use itertools::Itertools;
-
-fn next_value(vals: &[i64]) -> i64 {
+fn build_history(vals: &[i64]) -> Vec<Vec<i64>> {
     let mut history: Vec<Vec<i64>> = vec![vals.into()];
-
     loop {
         let vals = &history[history.len() - 1];
         let next: Vec<_> = vals
@@ -16,8 +14,10 @@ fn next_value(vals: &[i64]) -> i64 {
             break;
         };
     }
-
     history
+}
+fn next_value(vals: &[i64]) -> i64 {
+    build_history(vals)
         .iter()
         .rev()
         .map(|vals| vals.last().unwrap())
@@ -37,23 +37,7 @@ fn sum_next_values(current_values: &[Vec<i64>]) -> i64 {
 }
 
 fn previous_value(vals: &[i64]) -> i64 {
-    let mut history: Vec<Vec<i64>> = vec![vals.into()];
-
-    loop {
-        let vals = &history[history.len() - 1];
-        let next: Vec<_> = vals
-            .iter()
-            .tuple_windows::<(&i64, &i64)>()
-            .map(|(n1, n2)| *n2 - *n1)
-            .collect();
-        let all_zeroes = next.iter().all(|n| *n == 0);
-        history.push(next);
-        if all_zeroes {
-            break;
-        };
-    }
-
-    history
+    build_history(vals)
         .iter()
         .rev()
         .map(|vals| vals.first().unwrap())
