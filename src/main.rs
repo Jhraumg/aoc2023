@@ -1,4 +1,5 @@
 mod day1;
+mod day10;
 mod day2;
 mod day3;
 mod day4;
@@ -31,6 +32,9 @@ fn main() {
     println!("*** day8 ***");
     day8::cross_desert();
 
-    println!("*** dayµ9 ***");
+    println!("*** day9 ***");
     day9::observe_oasis();
+
+    println!("*** day10 ***");
+    day10::follow_pipes();
 }

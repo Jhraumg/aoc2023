@@ -15,6 +15,8 @@ struct Node {
     right: &'static str,
 }
 
+// TODO : nodes could be sorted => nodes id, left and right could be stored as usize
+// starts and end indexes would be indexes too
 struct Map {
     directions: Vec<Direction>,
     nodes: HashMap<&'static str, Node>,
