@@ -215,16 +215,10 @@ impl Map {
                 .flat_map(|pos| {
                     self.get_connected_neighbours(*pos)
                         .into_iter()
-                        .filter_map(|(_, pos)| {
-                            if !pipe_loop.contains(&pos) {
-                                Some(pos)
-                            } else {
-                                None
-                            }
-                        })
+                        .map(|(_, pos)| pos)
+                        .filter(|pos| !pipe_loop.contains(pos))
                 })
                 .collect();
-
             dist += 1
         }
 
@@ -233,15 +227,15 @@ impl Map {
 
     fn inner_area(&self) -> u64 {
         let pipe_loop = self.get_loop().0;
-        let minx = pipe_loop.iter().map(|(x, _)| *x).min().unwrap();
-        let maxx = pipe_loop.iter().map(|(x, _)| *x).max().unwrap();
-
-        let miny = pipe_loop.iter().map(|(_, y)| *y).min().unwrap();
-        let maxy = pipe_loop.iter().map(|(_, y)| *y).max().unwrap();
 
         let mut area = 0;
-        for x in minx..maxx + 1 {
-            for y in miny..maxy + 1 {
+
+        // standard surface detection
+        // for each point we trace 2 half-line originating from it,
+        // and count wether it cross the loop an odd number of times
+        // hallf lines are chose vertical&&horizontal
+        for x in 0..self.hlen + 1 {
+            for y in 0..self.vlen + 1 {
                 if x == 0 || x == self.hlen {
                     continue;
                 }
@@ -255,28 +249,29 @@ impl Map {
                 let left_cross_count = (0..x)
                     .fold((0, Tile::Ground), |(count, tile), i| {
                         if pipe_loop.contains(&(i, y)) {
-                            match &self.ground[y][i] {
+                            let new_tile = self.ground[y][i];
+                            match new_tile {
                                 Tile::Vert => (count + 1, Tile::Ground), // explicit cross
-                                Tile::NorthEast => (count, Tile::NorthEast), // maybe cross start
-                                Tile::SouthEast => (count, Tile::SouthEast), // maybe cross start
+                                Tile::NorthEast | Tile::SouthEast => (count, new_tile), // potential cross start
                                 Tile::Hrz => {
+                                    // continuation
                                     assert_ne!(tile, Tile::Ground);
                                     (count, tile)
-                                } // continuation
+                                }
                                 Tile::NorthWest => {
                                     if tile == Tile::SouthEast {
-                                        (count + 1, Tile::Ground)
+                                        (count + 1, Tile::Ground) // actual cross end
                                     } else {
                                         assert_eq!(Tile::NorthEast, tile);
-                                        (count, Tile::Ground)
+                                        (count, Tile::Ground) // u-turn => no cross
                                     }
                                 }
                                 Tile::SouthWest => {
                                     if tile == Tile::NorthEast {
-                                        (count + 1, Tile::Ground)
+                                        (count + 1, Tile::Ground) // actual cross end
                                     } else {
                                         assert_eq!(Tile::SouthEast, tile);
-                                        (count, Tile::Ground)
+                                        (count, Tile::Ground) // u-turn => no cross
                                     }
                                 }
                                 Tile::Start => {
@@ -294,29 +289,29 @@ impl Map {
                 let up_cross_count = (0..y)
                     .fold((0, Tile::Ground), |(count, tile), j| {
                         if pipe_loop.contains(&(x, j)) {
-                            // println!("FROM UP  previous {tile:?}  current({x},{j}) : {:?}", &self.ground[j][x]);
-                            match &self.ground[j][x] {
-                                Tile::Hrz => (count + 1, Tile::Ground),      // explicit cross
-                                Tile::SouthWest => (count, Tile::SouthWest), // maybe cross start
-                                Tile::SouthEast => (count, Tile::SouthEast), // maybe cross start
+                            let new_tile = self.ground[j][x];
+                            match new_tile {
+                                Tile::Hrz => (count + 1, Tile::Ground), // explicit cross
+                                Tile::SouthWest | Tile::SouthEast => (count, new_tile), // potential cross start
                                 Tile::Vert => {
+                                    // continuation
                                     assert_ne!(tile, Tile::Ground);
                                     (count, tile)
-                                } // continuation
+                                }
                                 Tile::NorthWest => {
                                     if tile == Tile::SouthEast {
-                                        (count + 1, Tile::Ground)
+                                        (count + 1, Tile::Ground) // actual cross end
                                     } else {
                                         assert_eq!(Tile::SouthWest, tile);
-                                        (count, Tile::Ground)
+                                        (count, Tile::Ground) // u-turn => no cross
                                     }
                                 }
                                 Tile::NorthEast => {
                                     if tile == Tile::SouthWest {
-                                        (count + 1, Tile::Ground)
+                                        (count + 1, Tile::Ground) // actual cross end
                                     } else {
                                         assert_eq!(Tile::SouthEast, tile);
-                                        (count, Tile::Ground)
+                                        (count, Tile::Ground) // u-turn => no cross
                                     }
                                 }
                                 Tile::Start => {

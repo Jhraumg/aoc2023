@@ -1,5 +1,6 @@
 mod day1;
 mod day10;
+mod day11;
 mod day2;
 mod day3;
 mod day4;
@@ -37,4 +38,7 @@ fn main() {
 
     println!("*** day10 ***");
     day10::follow_pipes();
+
+    println!("*** day11 ***");
+    day11::observe_space();
 }
