@@ -1,6 +1,8 @@
 mod day1;
 mod day10;
 mod day11;
+mod day12;
+mod day13;
 mod day2;
 mod day3;
 mod day4;
@@ -41,4 +43,10 @@ fn main() {
 
     println!("*** day11 ***");
     day11::observe_space();
+
+    println!("*** day12 ***");
+    day12::arrange_springs();
+
+    println!("*** day13 ***");
+    day13::check_notes();
 }
