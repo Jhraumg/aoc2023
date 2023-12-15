@@ -4,6 +4,7 @@ mod day11;
 mod day12;
 mod day13;
 mod day14;
+mod day15;
 mod day2;
 mod day3;
 mod day4;
@@ -46,7 +47,7 @@ fn main() {
     day11::observe_space();
 
     println!("*** day12 ***");
-    // day12::arrange_springs();
+    // takes > 1mn... day12::arrange_springs();
 
     println!("*** day13 ***");
     day13::check_notes();
@@ -54,4 +55,6 @@ fn main() {
     println!("*** day14 ***");
     day14::tune_parabol();
 
+    println!("*** day15 ***");
+    day15::init_factory();
 }

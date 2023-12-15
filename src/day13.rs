@@ -1,10 +1,10 @@
 use itertools::Itertools;
 use std::cmp::min;
 
-enum Tile {
-    Rock,
-    Sand,
-}
+// enum Tile {
+//     Rock,
+//     Sand,
+// }
 struct Pattern {
     tiles: Vec<Vec<char>>,
 }
@@ -51,7 +51,7 @@ fn is_vertical_reflexion_after(tiles: &[Vec<char>], index: usize) -> bool {
     true
 }
 
-fn print_tiles(tiles: &[Vec<char>]) {
+fn _print_tiles(tiles: &[Vec<char>]) {
     for l in tiles {
         println!("{}", l.iter().join(""));
     }
@@ -63,10 +63,10 @@ fn sum_note_with_correction(tiles: &[Vec<char>]) -> usize {
     (0..maxx)
         .flat_map(|i| (0..maxy).map(move |j| (i, j)))
         .map(|(i, j)| {
-            let mut new_tiles: Vec<Vec<char>> = tiles.iter().cloned().collect();
+            let mut new_tiles: Vec<Vec<char>> = tiles.to_vec();
             new_tiles[j][i] = if tiles[j][i] == '.' { '#' } else { '.' };
 
-            let sum = (0..maxy - 1)
+            (0..maxy - 1)
                 .filter(|vidx| {
                     if *vidx >= j {
                         //reflexion below the spot
@@ -105,9 +105,7 @@ fn sum_note_with_correction(tiles: &[Vec<char>]) -> usize {
                         /*println!("vert refl after {j}");*/
                         j + 1
                     })
-                    .sum::<usize>();
-            // println!("---> {sum}");
-            sum
+                    .sum::<usize>()
         })
         .sum()
 }
@@ -115,7 +113,7 @@ fn sum_note_with_correction(tiles: &[Vec<char>]) -> usize {
 fn sum_note(tiles: &[Vec<char>]) -> usize {
     // println!("----");
 
-    let sum = (0..tiles.len() - 1)
+    (0..tiles.len() - 1)
         .filter(|i| is_horizontal_reflexion_after(tiles, *i))
         .map(|i| {
             /*println!("horz refl after {i}");*/
@@ -128,9 +126,7 @@ fn sum_note(tiles: &[Vec<char>]) -> usize {
                 /*println!("vert refl after {j}");*/
                 j + 1
             })
-            .sum::<usize>();
-    // println!("---> {sum}");
-    sum
+            .sum::<usize>()
 }
 
 pub fn check_notes() {
@@ -182,17 +178,6 @@ mod tests {
             sum_note(&patterns[0].tiles) + sum_note(&patterns[1].tiles)
         );
 
-        let patterns_corrected = read_patterns(indoc! {"
-            ..##..##
-            ..#.##.#.
-            ##......#
-            ##......#
-            ..#.##.#.
-            ..##..##.
-            #.#.##.#.
-        "});
-        // assert_eq!(300,sum_note(&patterns_corrected[0].tiles));
-
         assert_eq!(300, sum_note_with_correction(&patterns[0].tiles));
         assert_eq!(100, sum_note_with_correction(&patterns[1].tiles));
         assert_eq!(
@@ -202,4 +187,3 @@ mod tests {
         );
     }
 }
-// 3217090 too high

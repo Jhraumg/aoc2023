@@ -1,128 +1,115 @@
-/// given (a,b,c,d) we need
-/// (\.)*#{a}(\.)+#{b}(\.)+#{c}(\.)+#{d}(\.)*
 use itertools::{repeat_n, Itertools};
-use num::Integer;
 use rayon::prelude::*;
-use std::cmp::{max, min};
-use std::iter::once;
-fn get_next_max_gap(record: &str, damaged: &[usize]) -> (usize, usize) {
-    if damaged.is_empty() {
-        return if record.as_bytes().iter().all(|u| *u as char != '#') {
-            (record.len(), record.len() + 1)
-        } else {
-            (0, 0)
-        };
-    }
 
-    let garanted_ending_ok = record
-        .as_bytes()
-        .iter()
-        .rev()
-        .take_while(|u| **u as char == '.')
-        .count();
-    let remaining_minimum_len =
-        garanted_ending_ok + damaged.iter().sum::<usize>() + damaged.len() - 1;
-    let number_of_ok_min = record
-        .as_bytes()
-        .iter()
-        .take_while(|u| **u as char == '.')
-        .count();
-    if number_of_ok_min + remaining_minimum_len > record.len() {
-        return (0, 0);
-    }
-    let max_alea = record.len() - remaining_minimum_len;
+use num::integer::binomial;
 
-    let mut number_of_ok_max = record
-        .as_bytes()
-        .iter()
-        .take_while(|u| **u as char != '#')
-        .count();
-
-    // were looking for the first #
-    let mut first_damage = record
-        .as_bytes()
-        .iter()
-        .find_position(|c| **c as char == '#')
-        .map(|(i, _)| i);
-
-    // and correct it by considering damaged[0] and space after this first #
-    let number_of_damaged_max = first_damage
-        .map(|fd| {
-            record[fd..]
-                .as_bytes()
-                .iter()
-                .take_while(|u| **u as char != '.')
-                .count()
-        })
-        .unwrap_or(0);
-    if number_of_damaged_max < damaged[0] {
-        _ = number_of_ok_max.saturating_sub(damaged[0] - number_of_damaged_max);
-    }
-
-    // println!("{record} => ({}..{})",number_of_ok_min,min(max_alea, number_of_ok_max)+1);
-    (number_of_ok_min, min(max_alea, number_of_ok_max) + 1)
-}
-fn count_unfolded_matches(record: &str, damaged: &[usize], previous: &[usize]) -> usize {
-    if previous.is_empty() {
+fn count_unfolded_matches(
+    record: &str,
+    damaged: &[usize],
+    previous: bool, /*&[usize]*/
+) -> usize {
+    if !previous
+    /*.is_empty()*/
+    {
         let record = repeat_n(record.to_string(), 5).join("?");
         let damaged: Vec<_> = (0..5).flat_map(|_| damaged.iter()).copied().collect();
-        count_matches(&record, &damaged, previous)
+        compute_matches(&record, &damaged, previous)
     } else {
-        count_matches(&record, &damaged, previous)
+        compute_matches(record, damaged, previous)
     }
 }
-fn count_matches(record: &str, damaged: &[usize], previous: &[usize]) -> usize {
-    // if is_start {println!("-------------- {record} {damaged:?}");}
-    let (min_next_gap, max_next_gap) = get_next_max_gap(record, damaged);
-    // println!("count matches({record},{damaged:?},{is_start:?}), {next_max_gap}");
-    if min_next_gap >= max_next_gap {
+
+fn minimum_len(damaged: &[usize]) -> usize {
+    if damaged.is_empty() {
+        0
+    } else {
+        damaged.iter().sum::<usize>() + damaged.len() - 1
+    }
+}
+
+fn count_max_damaged_seq_fitting(damaged: &[usize], gap_len: usize) -> usize {
+    let mut sum_with_gaps = 0;
+    let mut result = 0;
+    for d in damaged.iter() {
+        sum_with_gaps += *d + if result > 0 { 1 } else { 0 };
+        if sum_with_gaps > gap_len {
+            break;
+        }
+        result += 1;
+    }
+    result
+}
+
+fn compute_matches(record: &str, damaged: &[usize], previous: bool /* &[usize]*/) -> usize {
+    let forced_ok = record.chars().take_while(|c| *c == '.').count();
+    let record = &record[forced_ok..];
+    let forced_ok = record.chars().rev().take_while(|c| *c == '.').count();
+    let record = &record[..record.len() - forced_ok];
+    // println!("computed_matches('{record}', {damaged:?}, {previous:?})");
+    if minimum_len(damaged) > record.len() {
         return 0;
     }
-    let min_next_gap = if !previous.is_empty() {
-        max(1, min_next_gap)
-    } else {
-        min_next_gap
-    };
-    if damaged.len() == 0 {
-        return if min_next_gap <= record.len() && record.len() <= max_next_gap {
-            1
-        } else {
+
+    if damaged.is_empty() {
+        return if record.chars().any(|c| c == '#') {
             0
+        } else {
+            1
         };
     }
-    (min_next_gap..max_next_gap)
-        .map(|next_gap| {
-            if record.len() < next_gap + damaged[0] {
-                // should not be possible
-                return 0;
-            }
-            if record[next_gap..next_gap + damaged[0]]
-                .as_bytes()
-                .iter()
-                .any(|u| *u as char == '.')
-            {
-                return 0;
-            }
-            if record.len() == next_gap + damaged[0] {
-                return if damaged.len() == 1 { 1 } else { 0 };
-            }
-            if record.as_bytes()[next_gap + damaged[0]] as char == '#' {
-                return 0;
-            }
-            let current: Vec<_> = previous
-                .iter()
-                .chain(once(&next_gap))
-                .chain(once(&damaged[0]))
-                .copied()
-                .collect();
-            count_matches(&record[next_gap + damaged[0]..], &damaged[1..], &current)
-        })
-        .sum()
+
+    let leading_choices = record.chars().take_while(|c| *c == '?').count();
+    let next_no_choice = record.chars().nth(leading_choices);
+    match next_no_choice {
+        None => {
+            let margin =record.len()- minimum_len(damaged);
+            binomial(damaged.len()+margin,margin)
+        },
+        Some('.') /* ok */=> {
+            // let's try to spread the damaged around this ok point
+            let nb_damaged_max= count_max_damaged_seq_fitting(damaged, leading_choices);
+             (0..=nb_damaged_max).map(|i| {
+                let margin = leading_choices - minimum_len(&damaged[0..i]);
+                binomial(i+margin,margin)*compute_matches(&record[leading_choices+1..],&damaged[i..],previous  ||i>0)
+            }).sum()
+        }
+        _ /*damaged*/=> {
+            // there must be one damaged on this spot, the others are on each sides
+            let nb_damaged_max= count_max_damaged_seq_fitting(damaged, leading_choices);
+            (0..=nb_damaged_max).map(|i|{
+                if i == damaged.len() {return 0;} // there are not damaged left, but a #
+                //
+                let current=damaged[i];
+
+                let current_previous = previous|| i>0; // :-p
+
+                (1..=current).filter(|offset|*offset<=leading_choices+1).map(|reserved| {
+
+                    let current_record=&record[leading_choices+1-reserved..];
+                    // println!("current {current} reserved {reserved}");
+                    if current_record.len()<current {/*println!("{current_record} : not_enough place for {current}");*/return 0;}//not enough place
+                    if current_record[..current].chars().any(|c|c=='.'){/*println!("{current_record} : some . before  {current}");*/return 0;} // some ok on damage[i] place
+
+                    let solutions_before = if ! current_previous {1} else { compute_matches(&record[..leading_choices.saturating_sub(reserved)], &damaged[..i], previous) };
+                    if current_record.len()==current { // no place after
+                        return  if damaged.len()==i+1 {solutions_before} else { /*println!("still {} but no more spot",damaged.len()-i -1);*/0 };
+                    }
+                    if current_record[current..].starts_with('#') {/*println!("{current_record} : a # just after  {current}");*/return  0;} // cannot have a # just after current
+
+                    let solutions_after= compute_matches(&current_record[current+1..],&damaged[i+1..], true);
+                    // println!("@@@ compute_matches({},{:?})=> {solutions_before}  compute_matches({},{:?})=> {solutions_after} ",
+                    //          &record[..leading_choices.saturating_sub(reserved)],&damaged[..i],
+                    //          &current_record[current+1..],&damaged[i+1..]);
+                    solutions_before*solutions_after
+                }).sum::<usize>()
+            }).sum()
+        }
+    }
 }
 
 fn sum_arrangments(
     inputs: &'static str,
-    counter: impl Fn(&str, &[usize], &[usize]) -> usize + std::marker::Send + std::marker::Sync,
+    counter: impl Fn(&str, &[usize], bool /*&[usize]*/) -> usize + Send + Sync,
 ) -> usize {
     inputs
         .lines()
@@ -130,18 +117,16 @@ fn sum_arrangments(
         .enumerate()
         .collect_vec()
         .par_iter()
-        .map(|(i, l)| {
-            let (record, damaged) = l.split_once(" ").unwrap();
+        .map(|(_i, l)| {
+            let (record, damaged) = l.split_once(' ').unwrap();
             let damaged: Vec<usize> = damaged.split(',').filter_map(|g| g.parse().ok()).collect();
-            let result = counter(record, &damaged, &[]);
-            println!("{i}  {record} => {result}");
-            result
+            counter(record, &damaged, false)
         })
         .sum()
 }
 pub fn arrange_springs() {
     let input = include_str!("../resources/day12_records.txt");
-    let sum = sum_arrangments(input, count_matches);
+    let sum = sum_arrangments(input, compute_matches);
     println!("sum {sum}");
 
     let sum_unfold = sum_arrangments(input, count_unfolded_matches);
@@ -155,15 +140,27 @@ mod tests {
 
     #[test]
     fn aoc_example_works() {
-        // assert_eq!(1, sum_arrangments("???.### 1,1,3", count_matches));
-        assert_eq!(4, sum_arrangments(".??..??...?##. 1,1,3", count_matches));
-        assert_eq!(1, sum_arrangments("?#?#?#?#?#?#?#? 1,3,1,6", count_matches));
-        assert_eq!(1, sum_arrangments("????.#...#... 4,1,1", count_matches));
+        assert_eq!(
+            150,
+            sum_arrangments("?????????###???????? 2,1,3,2,1", compute_matches)
+        );
+        assert_eq!(1, sum_arrangments("..?##. 3", compute_matches));
+
+        assert_eq!(10, sum_arrangments("?###???????? 3,2,1", compute_matches));
+        assert_eq!(4, sum_arrangments(".??..??...?##. 1,1,3", compute_matches));
+        assert_eq!(1, sum_arrangments("?### 3", compute_matches));
+        assert_eq!(1, sum_arrangments("#???. 3", compute_matches));
+        assert_eq!(1, sum_arrangments("???. 3", compute_matches));
+
+        assert_eq!(
+            1,
+            sum_arrangments("?#?#?#?#?#?#?#? 1,3,1,6", compute_matches)
+        );
+        assert_eq!(1, sum_arrangments("????.#...#... 4,1,1", compute_matches));
         assert_eq!(
             4,
-            sum_arrangments("????.######..#####. 1,6,5", count_matches)
+            sum_arrangments("????.######..#####. 1,6,5", compute_matches)
         );
-        assert_eq!(10, sum_arrangments("?###???????? 3,2,1", count_matches));
         let input = indoc! {"
             ???.### 1,1,3
             .??..??...?##. 1,1,3
@@ -172,9 +169,9 @@ mod tests {
             ????.######..#####. 1,6,5
             ?###???????? 3,2,1
         "};
-        assert_eq!(21, sum_arrangments(input, count_matches));
+        assert_eq!(21, sum_arrangments(input, compute_matches));
 
-        assert_eq!(1, sum_arrangments("???.### 1,1,3", count_unfolded_matches));
+        assert_eq!(1, sum_arrangments("???.### 1,1,3", compute_matches));
         assert_eq!(
             16384,
             sum_arrangments(".??..??...?##. 1,1,3", count_unfolded_matches)
@@ -197,5 +194,3 @@ mod tests {
         );
     }
 }
-//4382 too low
-//
