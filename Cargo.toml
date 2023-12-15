@@ -12,3 +12,7 @@ itertools = "*"
 indoc = { version = "2.0.4", features = [] }
 num = { version = "0.4.1", features = [] }
 rayon = "1.8.0"
+
+
+[profile.toto]
+inherits = "release"

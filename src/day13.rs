@@ -58,21 +58,24 @@ fn print_tiles(tiles: &[Vec<char>]) {
 }
 
 fn sum_note_with_correction(tiles: &[Vec<char>]) -> usize {
-
     let maxx = tiles[0].len();
     let maxy = tiles.len();
-    (0..maxx).flat_map(|i|(0..maxy).map(move|j|(i,j)))
-        .map (|(i,j)|{
+    (0..maxx)
+        .flat_map(|i| (0..maxy).map(move |j| (i, j)))
+        .map(|(i, j)| {
             let mut new_tiles: Vec<Vec<char>> = tiles.iter().cloned().collect();
             new_tiles[j][i] = if tiles[j][i] == '.' { '#' } else { '.' };
 
             let sum = (0..maxy - 1)
                 .filter(|vidx| {
-                    if *vidx >=j {
+                    if *vidx >= j {
                         //reflexion below the spot
-                        if *vidx-j+1 > maxy - *vidx-1 {false}else{is_horizontal_reflexion_after(&new_tiles, *vidx)}
-
-                    }else{
+                        if *vidx - j + 1 > maxy - *vidx - 1 {
+                            false
+                        } else {
+                            is_horizontal_reflexion_after(&new_tiles, *vidx)
+                        }
+                    } else {
                         false
                         // if j- *vidx > *vidx+1 {false}else {is_horizontal_reflexion_after(&new_tiles, *vidx)}
                         // reflexion uppon the spo
@@ -84,26 +87,29 @@ fn sum_note_with_correction(tiles: &[Vec<char>]) -> usize {
                 })
                 .sum::<usize>()
                 + (0..maxx - 1)
-                .filter(|hidx| {
-                    if *hidx >=i {
-                        //reflexion below the spot
-                        if *hidx-i+1 > maxx - *hidx -1 {false}else{is_vertical_reflexion_after(&new_tiles, *hidx)}
-
-                    }else{
-                        false
-                        // if i- *hidx > *hidx+1 {false}else {is_vertical_reflexion_after(&new_tiles, *hidx)}
-                        // reflexion uppon the spo
-                    }
-                })
-                .map(|j| {
-                    /*println!("vert refl after {j}");*/
-                    j + 1
-                })
-                .sum::<usize>();
+                    .filter(|hidx| {
+                        if *hidx >= i {
+                            //reflexion below the spot
+                            if *hidx - i + 1 > maxx - *hidx - 1 {
+                                false
+                            } else {
+                                is_vertical_reflexion_after(&new_tiles, *hidx)
+                            }
+                        } else {
+                            false
+                            // if i- *hidx > *hidx+1 {false}else {is_vertical_reflexion_after(&new_tiles, *hidx)}
+                            // reflexion uppon the spo
+                        }
+                    })
+                    .map(|j| {
+                        /*println!("vert refl after {j}");*/
+                        j + 1
+                    })
+                    .sum::<usize>();
             // println!("---> {sum}");
             sum
-
-        }).sum()
+        })
+        .sum()
 }
 
 fn sum_note(tiles: &[Vec<char>]) -> usize {

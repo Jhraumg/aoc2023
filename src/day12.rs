@@ -2,101 +2,140 @@
 /// (\.)*#{a}(\.)+#{b}(\.)+#{c}(\.)+#{d}(\.)*
 use itertools::{repeat_n, Itertools};
 use num::Integer;
-use std::cmp::{max, min};
 use rayon::prelude::*;
-fn get_next_max_gap(record: &str, damaged: &[usize]) -> usize {
-    let max_alea = record.len() + 1 - damaged.iter().sum::<usize>() - damaged.len();
+use std::cmp::{max, min};
+use std::iter::once;
+fn get_next_max_gap(record: &str, damaged: &[usize]) -> (usize, usize) {
+    if damaged.is_empty() {
+        return if record.as_bytes().iter().all(|u| *u as char != '#') {
+            (record.len(), record.len() + 1)
+        } else {
+            (0, 0)
+        };
+    }
+
+    let garanted_ending_ok = record
+        .as_bytes()
+        .iter()
+        .rev()
+        .take_while(|u| **u as char == '.')
+        .count();
+    let remaining_minimum_len =
+        garanted_ending_ok + damaged.iter().sum::<usize>() + damaged.len() - 1;
+    let number_of_ok_min = record
+        .as_bytes()
+        .iter()
+        .take_while(|u| **u as char == '.')
+        .count();
+    if number_of_ok_min + remaining_minimum_len > record.len() {
+        return (0, 0);
+    }
+    let max_alea = record.len() - remaining_minimum_len;
+
+    let mut number_of_ok_max = record
+        .as_bytes()
+        .iter()
+        .take_while(|u| **u as char != '#')
+        .count();
 
     // were looking for the first #
-    let mut first_damage =         record
+    let mut first_damage = record
         .as_bytes()
         .iter()
-        .enumerate()
-        .find(|(_, c)| **c as char == '#')
-        .map(|(i, _)| i).unwrap_or_else(||record.len());
-
-
-    if damaged.is_empty() && first_damage!=record.len() {
-        // no solution anyway
-        return 0;
-    }
-    if damaged.is_empty(){
-        // should not happen
-        return record.len();
-    }
+        .find_position(|c| **c as char == '#')
+        .map(|(i, _)| i);
 
     // and correct it by considering damaged[0] and space after this first #
-    let next_ok= first_damage+ record[first_damage..]
-        .as_bytes()
-        .iter()
-        .enumerate()
-        .find(|(_, c)| **c as char == '.')
-        .map(|(i, _)| i)
-        .unwrap_or_else(||record[first_damage..].len());
-    if next_ok+1 < damaged[0]{
-
-        _= first_damage.saturating_sub(damaged[0]-next_ok-1);
+    let number_of_damaged_max = first_damage
+        .map(|fd| {
+            record[fd..]
+                .as_bytes()
+                .iter()
+                .take_while(|u| **u as char != '.')
+                .count()
+        })
+        .unwrap_or(0);
+    if number_of_damaged_max < damaged[0] {
+        _ = number_of_ok_max.saturating_sub(damaged[0] - number_of_damaged_max);
     }
 
-
-    min(
-        max_alea,
-        first_damage
-    )
+    // println!("{record} => ({}..{})",number_of_ok_min,min(max_alea, number_of_ok_max)+1);
+    (number_of_ok_min, min(max_alea, number_of_ok_max) + 1)
 }
-fn count_unfolded_matches(record: &str, damaged: &[usize], is_init: bool) -> usize {
-    if is_init {
+fn count_unfolded_matches(record: &str, damaged: &[usize], previous: &[usize]) -> usize {
+    if previous.is_empty() {
         let record = repeat_n(record.to_string(), 5).join("?");
         let damaged: Vec<_> = (0..5).flat_map(|_| damaged.iter()).copied().collect();
-        count_matches(&record, &damaged, true)
+        count_matches(&record, &damaged, previous)
     } else {
-        count_matches(&record, &damaged, is_init)
+        count_matches(&record, &damaged, previous)
     }
 }
-fn count_matches(record: &str, damaged: &[usize], is_start: bool) -> usize {
+fn count_matches(record: &str, damaged: &[usize], previous: &[usize]) -> usize {
     // if is_start {println!("-------------- {record} {damaged:?}");}
-    let next_max_gap = get_next_max_gap(record, damaged);
+    let (min_next_gap, max_next_gap) = get_next_max_gap(record, damaged);
     // println!("count matches({record},{damaged:?},{is_start:?}), {next_max_gap}");
-    if damaged.len() == 0 {
-        return if next_max_gap == record.len() { 1 } else { 0 };
+    if min_next_gap >= max_next_gap {
+        return 0;
     }
-    (0..next_max_gap + 1)
+    let min_next_gap = if !previous.is_empty() {
+        max(1, min_next_gap)
+    } else {
+        min_next_gap
+    };
+    if damaged.len() == 0 {
+        return if min_next_gap <= record.len() && record.len() <= max_next_gap {
+            1
+        } else {
+            0
+        };
+    }
+    (min_next_gap..max_next_gap)
         .map(|next_gap| {
-            let next_gap = if is_start { next_gap } else { next_gap + 1 };
             if record.len() < next_gap + damaged[0] {
+                // should not be possible
                 return 0;
             }
-            for j in 0..next_gap {
-                if record.as_bytes()[j] != '.' as u8 && record.as_bytes()[j] != '?' as u8 {
-                    // println!(". {record}[{i}] is not compatible with {gaps:?}/{damaged:?}");
-                    return 0;
-                }
+            if record[next_gap..next_gap + damaged[0]]
+                .as_bytes()
+                .iter()
+                .any(|u| *u as char == '.')
+            {
+                return 0;
             }
-            for j in next_gap..next_gap + damaged[0] {
-                if record.as_bytes()[j] != '#' as u8 && record.as_bytes()[j] != '?' as u8 {
-                    // println!(". {record}[{i}] is not compatible with {gaps:?}/{damaged:?}");
-                    return 0;
-                }
+            if record.len() == next_gap + damaged[0] {
+                return if damaged.len() == 1 { 1 } else { 0 };
             }
-            //let gaps :Vec<usize>=gaps.iter().copied().chain(once(next_gap)).collect();
-            count_matches(&record[next_gap + damaged[0]..], &damaged[1..], false)
-            //, &gaps)
+            if record.as_bytes()[next_gap + damaged[0]] as char == '#' {
+                return 0;
+            }
+            let current: Vec<_> = previous
+                .iter()
+                .chain(once(&next_gap))
+                .chain(once(&damaged[0]))
+                .copied()
+                .collect();
+            count_matches(&record[next_gap + damaged[0]..], &damaged[1..], &current)
         })
         .sum()
 }
 
-fn sum_arrangments(inputs: &'static str, counter: impl Fn(&str, &[usize], bool) -> usize + std::marker::Send + std::marker::Sync) -> usize {
+fn sum_arrangments(
+    inputs: &'static str,
+    counter: impl Fn(&str, &[usize], &[usize]) -> usize + std::marker::Send + std::marker::Sync,
+) -> usize {
     inputs
         .lines()
         .filter(|l| !l.is_empty())
         .enumerate()
         .collect_vec()
         .par_iter()
-        .map(|(i,l)| {
-            if i %10 == 0 {println!("{i} : {l}");}
+        .map(|(i, l)| {
             let (record, damaged) = l.split_once(" ").unwrap();
             let damaged: Vec<usize> = damaged.split(',').filter_map(|g| g.parse().ok()).collect();
-            counter(record, &damaged, true)
+            let result = counter(record, &damaged, &[]);
+            println!("{i}  {record} => {result}");
+            result
         })
         .sum()
 }
