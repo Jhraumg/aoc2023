@@ -196,7 +196,7 @@ impl Scene {
         }
     }
 
-    fn print(&self) {
+    fn _print(&self) {
         println!("---print--");
         println!("{:?}", self.rounded);
         for y in 0..self.maxy {
@@ -256,14 +256,14 @@ mod tests {
         scene.rounded = scene.tilt(&scene.rounded, Direction::North);
         assert_eq!(136, scene.weight());
 
-        scene.print();
+        scene._print();
         let mut scenenorth_west = scene.clone();
         scenenorth_west.rounded = scenenorth_west.tilt(&scenenorth_west.rounded, Direction::West);
         scenenorth_west.rounded.sort();
 
         println!("***scenenorth_west");
 
-        scenenorth_west.print();
+        scenenorth_west._print();
         println!("***scenenorth_west");
 
         let mut scene6: Scene = input.parse().unwrap();
