@@ -1,4 +1,4 @@
-use itertools::Itertools;
+use std::fmt::{Display, Formatter, Write};
 
 fn factory_hash(input: &str) -> usize {
     input
@@ -17,20 +17,25 @@ struct Lens {
     focal: usize,
 }
 
-fn _print_boxes(boxes: &[Vec<Lens>]) {
-    for (i, b) in boxes.iter().enumerate() {
-        if !b.is_empty() {
-            println!(
-                "Box({i}): {}",
-                b.iter()
-                    .map(|l| format!("[{} {}]", l.label, l.focal))
-                    .join(" ")
-            )
-        };
+// TODO : use proper boxes
+struct Boxes<'b>(&'b [Vec<Lens>]);
+impl<'b> Display for Boxes<'b> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        for (i, b) in self.0.iter().enumerate() {
+            if !b.is_empty() {
+                f.write_fmt(format_args!("Box({i}):"))?;
+                for l in b {
+                    f.write_fmt(format_args!(" [{} {}]", l.label, l.focal))?;
+                }
+                f.write_char('\n')?;
+            };
+        }
+        Ok(())
     }
 }
+
 fn sum_focusing_power(instructions: &'static str) -> usize {
-    let mut boxes: Vec<Vec<Lens>> = (0..256).map(|_| vec![]).collect();
+    let mut boxes: Vec<Vec<Lens>> = vec![Default::default(); 256];
     // let mut encoutered_lens: Vec<Lens> = vec![];
     for str_instruction in instructions.split(',') {
         // FIXME : define a proper Instruction struct
@@ -60,7 +65,7 @@ fn sum_focusing_power(instructions: &'static str) -> usize {
             }
         }
         // println!("\nafter '{str_instruction}':");
-        // print_boxes(&boxes);
+        // println!("{}",Boxes(&boxes));
     }
 
     boxes

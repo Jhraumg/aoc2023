@@ -2,8 +2,8 @@ use crate::day16::Direction::*;
 use itertools::Itertools;
 use std::cmp::max;
 use std::collections::{HashMap, HashSet};
-use std::convert::identity;
 use std::str::FromStr;
+use rayon::prelude::*;
 
 #[derive(Debug)]
 struct Contraption {
@@ -44,7 +44,9 @@ struct Beam {
     y: usize,
     dir: Option<Direction>,
 }
+
 impl Contraption {
+
     fn propagate_step(&self, beam: Beam, inplace: bool) -> Vec<Beam> {
         let Beam { x, y, dir } = beam;
         if dir.is_none() {
@@ -502,6 +504,8 @@ impl Contraption {
                         })
                     })
                 })
+                .collect_vec()
+                .into_par_iter()
                 .map(|b| count_energized(self.propagate_from_edge(b)))
                 .max()
                 .unwrap(),

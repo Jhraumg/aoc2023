@@ -14,6 +14,7 @@ mod day6;
 mod day7;
 mod day8;
 mod day9;
+mod day17;
 
 fn main() {
     println!("*** day 1 *** ");
@@ -48,7 +49,8 @@ fn main() {
     day11::observe_space();
 
     println!("*** day12 ***");
-    // takes > 1mn... day12::arrange_springs();
+    // takes > 1mn...
+    // day12::arrange_springs();
 
     println!("*** day13 ***");
     day13::check_notes();
@@ -61,4 +63,7 @@ fn main() {
 
     println!("*** day16 ***");
     day16::fix_contraption();
+
+    println!("*** day17 ***");
+    day17::carry_lava();
 }

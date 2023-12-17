@@ -1,6 +1,6 @@
 use crate::day14::Axis::{Horizontal, Vertical};
-use itertools::Itertools;
 use std::collections::HashMap;
+use std::fmt::{Display, Formatter, Write};
 use std::str::FromStr;
 
 #[derive(Debug, Clone, Eq, PartialEq)]
@@ -195,28 +195,22 @@ impl Scene {
             previous.insert(self.rounded.clone(), i);
         }
     }
-
-    fn _print(&self) {
-        println!("---print--");
-        println!("{:?}", self.rounded);
+}
+impl Display for Scene {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         for y in 0..self.maxy {
-            // for x in 0..self.maxx {
-            //     println!("[{x},{y}] rounded : {:?}", self.rounded.contains(&[x, y]));
-            //     println!("[{x},{y}] dubed : {:?}", self.cubed.contains(&[x, y]));
-            // }
-            println!(
-                "{}",
-                (0..self.maxx)
-                    .map(|x| if self.cubed.contains(&[x, y]) {
-                        '#'
-                    } else if self.rounded.contains(&[x, y]) {
-                        'O'
-                    } else {
-                        '.'
-                    })
-                    .join("")
-            );
+            for x in 0..self.maxx {
+                f.write_char(if self.cubed.contains(&[x, y]) {
+                    '#'
+                } else if self.rounded.contains(&[x, y]) {
+                    'O'
+                } else {
+                    '.'
+                })?;
+            }
+            f.write_char('\n')?;
         }
+        Ok(())
     }
 }
 pub fn tune_parabol() {
@@ -256,15 +250,12 @@ mod tests {
         scene.rounded = scene.tilt(&scene.rounded, Direction::North);
         assert_eq!(136, scene.weight());
 
-        scene._print();
+        print!("{scene}");
         let mut scenenorth_west = scene.clone();
         scenenorth_west.rounded = scenenorth_west.tilt(&scenenorth_west.rounded, Direction::West);
         scenenorth_west.rounded.sort();
 
-        println!("***scenenorth_west");
-
-        scenenorth_west._print();
-        println!("***scenenorth_west");
+        println!("\n***scenenorth_west\n{scenenorth_west}\n-----");
 
         let mut scene6: Scene = input.parse().unwrap();
         scene6.tune();
