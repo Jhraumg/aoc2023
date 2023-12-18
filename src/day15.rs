@@ -1,10 +1,7 @@
 use std::fmt::{Display, Formatter, Write};
 
 fn factory_hash(input: &str) -> usize {
-    input
-        .as_bytes()
-        .iter()
-        .fold(0, |hsh, c| ((hsh + *c as usize) * 17) % 256)
+    input.as_bytes().iter().fold(0, |hsh, c| ((hsh + *c as usize) * 17) % 256)
 }
 
 fn sum_instructions_hash(input: &str) -> usize {

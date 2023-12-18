@@ -136,10 +136,7 @@ pub fn check_notes() {
     let sum: usize = patterns.iter().map(|p| sum_note(&p.tiles)).sum();
 
     println!("sum : {sum}");
-    let sum_with_corr: usize = patterns
-        .iter()
-        .map(|p| sum_note_with_correction(&p.tiles))
-        .sum();
+    let sum_with_corr: usize = patterns.iter().map(|p| sum_note_with_correction(&p.tiles)).sum();
     println!("sum with correction {sum_with_corr}");
 }
 

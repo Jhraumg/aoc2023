@@ -35,16 +35,9 @@ fn multiply_race_margins(input: &str) -> u64 {
     let times: Vec<u64> = times.split(' ').filter_map(|w| w.parse().ok()).collect();
 
     let (_, distances) = lines.next().unwrap().split_once(':').unwrap();
-    let distances: Vec<u64> = distances
-        .split(' ')
-        .filter_map(|w| w.parse().ok())
-        .collect();
+    let distances: Vec<u64> = distances.split(' ').filter_map(|w| w.parse().ok()).collect();
 
-    times
-        .into_iter()
-        .zip(distances)
-        .map(|(t, d)| compute_margins(t, d))
-        .product()
+    times.into_iter().zip(distances).map(|(t, d)| compute_margins(t, d)).product()
 }
 
 fn compute_single_race_margins(input: &str) -> u64 {

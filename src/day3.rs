@@ -66,8 +66,7 @@ impl FromStr for EngineSchema {
                 match c {
                     d if d.is_ascii_digit() => {
                         acc.push(
-                            d.to_digit(10)
-                                .ok_or_else(|| eyre!("digit conversion for '{d}'"))?,
+                            d.to_digit(10).ok_or_else(|| eyre!("digit conversion for '{d}'"))?,
                         );
                     }
                     c => {
@@ -147,12 +146,7 @@ fn sum_gear_ratios(schema: &EngineSchema) -> u32 {
                 if ratios.len() != 2 {
                     None
                 } else {
-                    Some(
-                        ratios
-                            .iter()
-                            .filter_map(EngineSymbol::try_to_number)
-                            .product::<u32>(),
-                    )
+                    Some(ratios.iter().filter_map(EngineSymbol::try_to_number).product::<u32>())
                 }
             }
             _ => None,

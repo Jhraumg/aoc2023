@@ -83,11 +83,8 @@ fn read_converter(lines: &mut Lines) -> Converter {
         if l.is_empty() {
             break;
         }
-        let (dest, source, len) = l
-            .split(' ')
-            .filter_map(|w| w.parse::<u64>().ok())
-            .collect_tuple()
-            .unwrap();
+        let (dest, source, len) =
+            l.split(' ').filter_map(|w| w.parse::<u64>().ok()).collect_tuple().unwrap();
         converter.conversions.push(Conversion { source, dest, len });
     }
     converter
@@ -98,12 +95,7 @@ fn get_location(input: &str) -> u64 {
     let seeds: Vec<u64> = lines
         .next()
         .and_then(|l| l.split_once(':'))
-        .map(|(_, seeds)| {
-            seeds
-                .split(' ')
-                .filter_map(|s| s.parse::<u64>().ok())
-                .collect()
-        })
+        .map(|(_, seeds)| seeds.split(' ').filter_map(|s| s.parse::<u64>().ok()).collect())
         .unwrap();
     let _ = lines.next();
 

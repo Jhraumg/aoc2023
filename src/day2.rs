@@ -65,9 +65,8 @@ impl FromStr for Game {
     type Err = Error;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let (raw_id, raw_rounds) = s
-            .split_once(':')
-            .ok_or_else(|| eyre!("no game id delimiter in {s}"))?;
+        let (raw_id, raw_rounds) =
+            s.split_once(':').ok_or_else(|| eyre!("no game id delimiter in {s}"))?;
         let id: u32 = raw_id
             .trim()
             .replace("Game ", "")
@@ -94,32 +93,22 @@ fn is_game_possible(game: &Game, cubes_set: &CubesSet) -> bool {
 
 fn sum_possible_games(games: &[Game]) -> u32 {
     const CUBES_SET: CubesSet = CubesSet([12, 13, 14]);
-    games
-        .iter()
-        .filter(|g| is_game_possible(g, &CUBES_SET))
-        .map(|g| g.id)
-        .sum()
+    games.iter().filter(|g| is_game_possible(g, &CUBES_SET)).map(|g| g.id).sum()
 }
 
 fn get_minimum_cub_set(game: &Game) -> CubesSet {
-    game.rounds
-        .iter()
-        .fold(CubesSet([0; COLOR_VARIANT_COUNT]), |mut current, round| {
-            for i in 0..COLOR_VARIANT_COUNT {
-                if current.0[i] < round.0[i] {
-                    current.0[i] = round.0[i]
-                };
-            }
-            current
-        })
+    game.rounds.iter().fold(CubesSet([0; COLOR_VARIANT_COUNT]), |mut current, round| {
+        for i in 0..COLOR_VARIANT_COUNT {
+            if current.0[i] < round.0[i] {
+                current.0[i] = round.0[i]
+            };
+        }
+        current
+    })
 }
 
 fn parse_games(input: &str) -> Result<Vec<Game>, Error> {
-    input
-        .lines()
-        .filter(|l| !l.trim().is_empty())
-        .map(|l| l.parse::<Game>())
-        .collect()
+    input.lines().filter(|l| !l.trim().is_empty()).map(|l| l.parse::<Game>()).collect()
 }
 
 fn power(cubes_set: &CubesSet) -> u32 {

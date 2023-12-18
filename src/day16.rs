@@ -1,9 +1,9 @@
 use crate::day16::Direction::*;
 use itertools::Itertools;
+use rayon::prelude::*;
 use std::cmp::max;
 use std::collections::{HashMap, HashSet};
 use std::str::FromStr;
-use rayon::prelude::*;
 
 #[derive(Debug)]
 struct Contraption {
@@ -46,7 +46,6 @@ struct Beam {
 }
 
 impl Contraption {
-
     fn propagate_step(&self, beam: Beam, inplace: bool) -> Vec<Beam> {
         let Beam { x, y, dir } = beam;
         if dir.is_none() {
@@ -424,10 +423,7 @@ impl Contraption {
                 }
             }
         };
-        for b in result
-            .iter()
-            .filter(|b| b.x >= self.maxx || b.y >= self.maxy)
-        {
+        for b in result.iter().filter(|b| b.x >= self.maxx || b.y >= self.maxy) {
             println!("Error on {b:?} from {x},{y},{dir:?}");
         }
 
@@ -465,9 +461,7 @@ impl Contraption {
     }
     fn _display_beam(&self, beams: &HashSet<Beam>) {
         let beam_points: HashSet<(usize, usize)> = beams.iter().map(|b| (b.x, b.y)).collect();
-        assert!(beam_points
-            .iter()
-            .all(|(x, y)| *x < self.maxx && *y < self.maxy));
+        assert!(beam_points.iter().all(|(x, y)| *x < self.maxx && *y < self.maxy));
         for y in 0..self.maxy {
             println!(
                 "{}",
@@ -485,9 +479,7 @@ impl Contraption {
         for y in 0..self.maxy {
             println!(
                 "{}",
-                (0..self.maxx)
-                    .map(|x| self.mirrors.get(&(x, y)).unwrap_or(&'.'))
-                    .join("")
+                (0..self.maxx).map(|x| self.mirrors.get(&(x, y)).unwrap_or(&'.')).join("")
             );
         }
     }
@@ -532,9 +524,8 @@ fn count_energized(beams: HashSet<Beam>) -> usize {
 }
 
 pub fn fix_contraption() {
-    let contraption: Contraption = include_str!("../resources/day16_contraption.txt")
-        .parse()
-        .unwrap();
+    let contraption: Contraption =
+        include_str!("../resources/day16_contraption.txt").parse().unwrap();
     let energized = count_energized(contraption.propagate());
     println!("energized cells : {energized}");
     let max_energized = contraption.tune();

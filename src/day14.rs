@@ -38,11 +38,8 @@ impl FromStr for Scene {
     type Err = ();
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let chars: Vec<Vec<char>> = s
-            .lines()
-            .filter(|l| !l.is_empty())
-            .map(|l| l.chars().collect())
-            .collect();
+        let chars: Vec<Vec<char>> =
+            s.lines().filter(|l| !l.is_empty()).map(|l| l.chars().collect()).collect();
 
         let chars = &chars;
 

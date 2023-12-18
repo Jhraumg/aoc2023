@@ -1,14 +1,10 @@
-use std::cmp::min;
 use itertools::{repeat_n, Itertools};
 use rayon::prelude::*;
+use std::cmp::min;
 
 use num::integer::binomial;
 
-fn count_unfolded_matches(
-    record: &str,
-    damaged: &[usize],
-) -> usize {
-
+fn count_unfolded_matches(record: &str, damaged: &[usize]) -> usize {
     let record = repeat_n(record.to_string(), 5).join("?");
     let damaged: Vec<_> = (0..5).flat_map(|_| damaged.iter()).copied().collect();
     // let mut sorted_consecutive_damaged_groups=_get_consecutive_damaged_groups(&record);
@@ -41,13 +37,19 @@ fn count_max_damaged_seq_fitting(damaged: &[usize], gap_len: usize) -> usize {
 
 #[allow(dead_code)]
 fn get_consecutive_damaged_groups(record: &str) -> Vec<(usize, usize)> {
-    record.chars().enumerate()
-        .group_by(|(_,c)|*c=='#').into_iter()
-        .filter_map(|(damaged, group)|if damaged{
-            group.map(|(i,_)|(i,1usize))
-                .reduce(|(i1,j1),(i2,j2)|(min(i1,i2),j1+j2))
-
-        }else{None}).collect()
+    record
+        .chars()
+        .enumerate()
+        .group_by(|(_, c)| *c == '#')
+        .into_iter()
+        .filter_map(|(damaged, group)| {
+            if damaged {
+                group.map(|(i, _)| (i, 1usize)).reduce(|(i1, j1), (i2, j2)| (min(i1, i2), j1 + j2))
+            } else {
+                None
+            }
+        })
+        .collect()
 }
 
 /// Compute number of possible matches by focusing first on known damaged spots
@@ -63,37 +65,72 @@ fn get_consecutive_damaged_groups(record: &str) -> Vec<(usize, usize)> {
 ///     <br/>**index is from original record, thus must be corrected by `record_offset`**
 /// * `record_offset` : offset of the current record in the original one
 #[allow(dead_code)]
-fn compute_matches_damaged_first(record: &str,
-                                  damaged: &[usize],
-                                  sorted_consecutives_damaged:&[(usize, usize)],
-                                  record_offset:usize) -> usize {
-    let len =record.len();
-    let longest_damaged = sorted_consecutives_damaged.iter().find(|(i,_)|*i>=record_offset && *i-record_offset<len).copied();
-    if let Some((d_idx,d_len)) = longest_damaged {
-        let d_idx=d_idx-record_offset;
+fn compute_matches_damaged_first(
+    record: &str,
+    damaged: &[usize],
+    sorted_consecutives_damaged: &[(usize, usize)],
+    record_offset: usize,
+) -> usize {
+    let len = record.len();
+    let longest_damaged = sorted_consecutives_damaged
+        .iter()
+        .find(|(i, _)| *i >= record_offset && *i - record_offset < len)
+        .copied();
+    if let Some((d_idx, d_len)) = longest_damaged {
+        let d_idx = d_idx - record_offset;
 
-        damaged.iter().enumerate().filter(|(_,d)|**d >= d_len).map(|(i,d)|{
-            let current=*d;
-            (0..=current-d_len).filter(|offset|*offset<=d_idx).map(|offset| {
+        damaged
+            .iter()
+            .enumerate()
+            .filter(|(_, d)| **d >= d_len)
+            .map(|(i, d)| {
+                let current = *d;
+                (0..=current - d_len)
+                    .filter(|offset| *offset <= d_idx)
+                    .map(|offset| {
+                        let current_record = &record[d_idx - offset..];
+                        if current_record.len() < current {
+                            return 0;
+                        } // not enough space
+                        if current_record[..current].chars().any(|c| c == '.') {
+                            return 0;
+                        } // some OK on current spot
 
-                let current_record=&record[d_idx-offset..];
-                if current_record.len()<current {return 0;}// not enough space
-                if current_record[..current].chars().any(|c|c=='.'){return  0;} // some OK on current spot
+                        if d_idx - offset > 0 && record[d_idx - offset - 1..].starts_with('#') {
+                            return 0;
+                        } // '#' just before
+                        if current_record[current..].starts_with('#') {
+                            return 0;
+                        } // '#' just after
 
-                if d_idx-offset > 0 && record[d_idx-offset-1..].starts_with('#'){return 0;} // '#' just before
-                if current_record[current..].starts_with('#') {return 0;}// '#' just after
+                        let solutions_before = if d_idx - offset > 0 {
+                            compute_matches_damaged_first(
+                                &record[..d_idx - offset - 1],
+                                &damaged[..i],
+                                sorted_consecutives_damaged,
+                                record_offset,
+                            )
+                        } else {
+                            1
+                        };
+                        let solutions_after = if current_record.len() > current {
+                            compute_matches_damaged_first(
+                                &current_record[current + 1..],
+                                &damaged[i + 1..],
+                                sorted_consecutives_damaged,
+                                record_offset + d_idx - offset + current + 1,
+                            )
+                        } else {
+                            1
+                        };
 
-                let solutions_before = if d_idx-offset > 0 {
-                    compute_matches_damaged_first(&record[..d_idx-offset-1], &damaged[..i],sorted_consecutives_damaged, record_offset)
-                }else{1};
-                let solutions_after= if current_record.len()>current {
-                    compute_matches_damaged_first(&current_record[current+1..], &damaged[i+1..],sorted_consecutives_damaged, record_offset+d_idx-offset+current+1)}else{1};
-
-                solutions_before*solutions_after
-            }).sum::<usize>()
-        }).sum()
-    }else{
-        compute_matches(record,damaged)
+                        solutions_before * solutions_after
+                    })
+                    .sum::<usize>()
+            })
+            .sum()
+    } else {
+        compute_matches(record, damaged)
     }
 }
 

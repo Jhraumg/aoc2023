@@ -52,24 +52,17 @@ fn distance(g1: (usize, usize), g2: (usize, usize)) -> usize {
 }
 impl<const N: usize> Sky<N> {
     pub fn sum_distance(&self) -> usize {
-        self.galaxies
-            .iter()
-            .combinations(2)
-            .map(|g| distance(*g[0], *g[1]))
-            .sum()
+        self.galaxies.iter().combinations(2).map(|g| distance(*g[0], *g[1])).sum()
     }
 }
 
 pub fn observe_space() {
-    let sky: Sky<1> = include_str!("../resources/day11_space_observation.txt")
-        .parse()
-        .unwrap();
+    let sky: Sky<1> = include_str!("../resources/day11_space_observation.txt").parse().unwrap();
     let sum_distance = sky.sum_distance();
     println!("sum distance {sum_distance}");
 
-    let sky1000000: Sky<1000000> = include_str!("../resources/day11_space_observation.txt")
-        .parse()
-        .unwrap();
+    let sky1000000: Sky<1000000> =
+        include_str!("../resources/day11_space_observation.txt").parse().unwrap();
     let sum_distance1000000 = sky1000000.sum_distance();
     println!("sum distance1000000 {sum_distance1000000}");
 }

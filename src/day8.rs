@@ -35,11 +35,8 @@ impl Map {
             })
             .collect();
 
-        let nodes: HashMap<&'static str, Node> = lines
-            .filter(|l| !l.is_empty())
-            .map(to_node)
-            .map(|n| (n.name, n))
-            .collect();
+        let nodes: HashMap<&'static str, Node> =
+            lines.filter(|l| !l.is_empty()).map(to_node).map(|n| (n.name, n)).collect();
 
         Self { directions, nodes }
     }
@@ -75,9 +72,8 @@ fn ghost_path_len(input: &'static str) -> u64 {
     let Map { directions, nodes } = Map::new(input);
     let dir_len = directions.len();
 
-    let start_nodes = nodes
-        .iter()
-        .filter_map(|(_, n)| if n.name.ends_with('A') { Some(n) } else { None });
+    let start_nodes =
+        nodes.iter().filter_map(|(_, n)| if n.name.ends_with('A') { Some(n) } else { None });
 
     let revolving_paths: Vec<(Vec<&'static str>, usize)> = start_nodes
         .map(|n| {

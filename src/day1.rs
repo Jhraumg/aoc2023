@@ -63,10 +63,7 @@ fn calibrate_literals(input: &str) -> u32 {
         ("eight", 8),
         ("nine", 9),
     ];
-    input
-        .lines()
-        .map(|l| to_calibration(l, &DIGITS_AND_LITERALS))
-        .sum()
+    input.lines().map(|l| to_calibration(l, &DIGITS_AND_LITERALS)).sum()
 }
 
 pub fn calibrate_trebuchet() {

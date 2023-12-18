@@ -182,10 +182,7 @@ fn sum_winnings(input: &str) -> u64 {
             },
         )
         .collect();
-    game.into_iter()
-        .enumerate()
-        .map(|(i, (_, bid))| (i as u64 + 1) * bid)
-        .sum()
+    game.into_iter().enumerate().map(|(i, (_, bid))| (i as u64 + 1) * bid).sum()
 }
 
 fn cmp_hands_with_j(h1: &Hand, h2: &Hand) -> std::cmp::Ordering {
@@ -231,10 +228,7 @@ fn sum_winnings_with_j(input: &str) -> u64 {
         })
         .sorted_by(|(h1, _), (h2, _)| cmp_hands_with_j(h1, h2))
         .collect();
-    game.into_iter()
-        .enumerate()
-        .map(|(i, (_, bid))| (i as u64 + 1) * bid)
-        .sum()
+    game.into_iter().enumerate().map(|(i, (_, bid))| (i as u64 + 1) * bid).sum()
 }
 pub fn play_camel_cards() {
     let input = include_str!("../resources/day7_camel_cards.txt");

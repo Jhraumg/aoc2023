@@ -158,18 +158,10 @@ impl Map {
     fn get_start_type(start_pos: (usize, usize), ground: &[Vec<Tile>]) -> Tile {
         let (startx, starty) = start_pos;
         let neighbours = Map::get_neighbours(startx, starty, ground);
-        let north_n = neighbours
-            .iter()
-            .find(|(t, (_, y))| t.can_face_south() && *y < starty);
-        let south_n = neighbours
-            .iter()
-            .find(|(t, (_, y))| t.can_face_north() && *y > starty);
-        let east_n = neighbours
-            .iter()
-            .find(|(t, (x, _))| t.can_face_west() && *x > startx);
-        let west_n = neighbours
-            .iter()
-            .find(|(t, (x, _))| t.can_face_east() && *x < startx);
+        let north_n = neighbours.iter().find(|(t, (_, y))| t.can_face_south() && *y < starty);
+        let south_n = neighbours.iter().find(|(t, (_, y))| t.can_face_north() && *y > starty);
+        let east_n = neighbours.iter().find(|(t, (x, _))| t.can_face_west() && *x > startx);
+        let west_n = neighbours.iter().find(|(t, (x, _))| t.can_face_east() && *x < startx);
 
         if north_n.is_some() {
             if south_n.is_some() {
@@ -338,9 +330,7 @@ impl Map {
 }
 
 pub fn follow_pipes() {
-    let map: Map = include_str!("../resources/day10_pipes.txt")
-        .parse()
-        .unwrap();
+    let map: Map = include_str!("../resources/day10_pipes.txt").parse().unwrap();
     let farthest = map.get_loop().1;
     println!("fartest : {farthest}");
     let area = map.inner_area();

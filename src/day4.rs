@@ -16,19 +16,14 @@ impl FromStr for CardsGame {
         let mut values: Vec<HashSet<u32>> = vec![];
 
         for l in s.lines() {
-            let (_card, str_values) = l
-                .split_once(':')
-                .ok_or_else(|| eyre!("no card Id separator in {l}"))?;
+            let (_card, str_values) =
+                l.split_once(':').ok_or_else(|| eyre!("no card Id separator in {l}"))?;
             let (win, ours) = str_values
                 .split_once('|')
                 .ok_or_else(|| eyre!("no win|self separator in {str_values}"))?;
 
             wins.push(win.split(' ').filter_map(|v| v.parse().ok()).collect());
-            values.push(
-                ours.split(' ')
-                    .filter_map(|v| v.parse::<u32>().ok())
-                    .collect(),
-            );
+            values.push(ours.split(' ').filter_map(|v| v.parse::<u32>().ok()).collect());
         }
         Ok(Self { wins, values })
     }
@@ -40,12 +35,7 @@ fn sum_cards_scores(input: &str) -> u32 {
     game.wins
         .iter()
         .zip(game.values.iter())
-        .map(|(w, o)| {
-            w.iter()
-                .map(|v| if o.contains(v) { 2 } else { 1 })
-                .product::<u32>()
-                / 2
-        })
+        .map(|(w, o)| w.iter().map(|v| if o.contains(v) { 2 } else { 1 }).product::<u32>() / 2)
         .sum()
 }
 
