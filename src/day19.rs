@@ -1,8 +1,6 @@
-use crate::day19::InstrFilter::Reject;
-use itertools::{cloned, Itertools};
+use itertools::Itertools;
 use std::cmp::{max, min};
 use std::collections::HashMap;
-use std::io::Read;
 use std::iter::once;
 use std::str::FromStr;
 
@@ -81,7 +79,7 @@ impl FromStr for Filter {
                     .map(|i| {
                         if i.contains(':') {
                             let (compar, dest) = i.split_once(':').unwrap();
-                            let (_, val) = compar.split_once(&['>', '<']).unwrap();
+                            let (_, val) = compar.split_once(['>', '<']).unwrap();
                             let val: usize = val.parse().unwrap();
                             let carac = compar.chars().nth(0).unwrap();
                             if compar.contains('>') {
@@ -122,7 +120,7 @@ impl Filter {
         let mut pos = "in".to_string();
         while pos != "A" && pos != "R" {
             let instr = self.workflows.get(&pos).unwrap();
-            pos = Self::apply(&instr, part);
+            pos = Self::apply(instr, part);
         }
         &pos == "A"
     }
@@ -152,8 +150,7 @@ impl Filter {
                 }
                 let no_solutions = no_solutions
                     || max_greater
-                        .map(|maxgt| min_lesser.map(|minlt| minlt <= maxgt))
-                        .flatten()
+                        .and_then(|maxgt| min_lesser.map(|minlt| minlt <= maxgt))
                         .unwrap_or(false);
 
                 if no_solutions {
@@ -186,7 +183,7 @@ impl Filter {
                                     .iter()
                                     .cloned()
                                     .chain(workflow[..i].iter().map(|i| i.filter.not()))
-                                    .chain(once(instr.filter.clone()))
+                                    .chain(once(instr.filter))
                                     .collect_vec(),
                             ),
                         )
@@ -204,7 +201,6 @@ impl Filter {
         accepted_paths
             .into_iter()
             .map(|p| {
-                let compact = Self::compact(&p);
                 let result = "xmas"
                     .chars()
                     .map(|c| {

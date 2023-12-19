@@ -44,11 +44,11 @@ impl<const COLOR_FIRST: bool> FromStr for Trench<COLOR_FIRST> {
                         .next()
                         .ok_or_else(|| eyre!("No direction provided in {l}"))
                         .and_then(str::parse::<Direction>)
-                        .map_err(|e| eyre!("parse error on {l}"))?;
+                        .map_err(|e| eyre!("parse error {e} on {l}"))?;
                     let len: usize = parts
                         .next()
                         .ok_or_else(|| eyre!("No len provided in {l}"))
-                        .and_then(|len| len.parse().map_err(|e| eyre!("len read error")))?;
+                        .and_then(|len| len.parse().map_err(|e| eyre!("len read error {e}")))?;
                     //let color :&str = parts.next().ok_or_else(||eyre!("No color provided in {l}"))?;
                     Ok((dir, len))
                 } else {
@@ -162,12 +162,12 @@ impl<const COLOR_FIRST: bool> Trench<COLOR_FIRST> {
                     let left_inside = i > 0 && rectangles_in.contains(&(i - 1, j));
                     if left_inside {
                         //rectangle on the left is also in the area, left side as been counted twice
-                        area -= (y2 + 1 - y1);
+                        area -= y2 + 1 - y1;
                     }
                     let up_inside = j > 0 && rectangles_in.contains(&(i, j - 1));
                     if up_inside {
                         //rectangle above is also in the area, left side as been counted twice
-                        area -= (x2 + 1 - x1);
+                        area -= x2 + 1 - x1;
                     }
                     if left_inside && up_inside {
                         // edge has been removed twice
