@@ -16,6 +16,7 @@ mod day6;
 mod day7;
 mod day8;
 mod day9;
+mod day19;
 
 fn main() {
     println!("*** day 1 *** ");
@@ -69,5 +70,9 @@ fn main() {
     day17::carry_lava();
 
     println!("*** day18 ***");
-    day18::dig_lagoon();
+    // day18::dig_lagoon();
+
+    println!("*** day19 ***");
+    day19::filter_parts();
+
 }
