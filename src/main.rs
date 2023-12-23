@@ -13,6 +13,7 @@ mod day2;
 mod day20;
 mod day21;
 mod day22;
+mod day23;
 mod day3;
 mod day4;
 mod day5;
@@ -84,6 +85,11 @@ fn main() {
     // println!("*** day21 ***");
     // day21::walk_exercise();
 
-    println!("*** day22 ***");
-    day22::dispatch_sand();
+    // println!("*** day22 ***");
+    // day22::dispatch_sand();
+
+    println!("*** day23 ***");
+    day23::hike_garden();
+
+
 }
