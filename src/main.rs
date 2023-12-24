@@ -14,6 +14,7 @@ mod day20;
 mod day21;
 mod day22;
 mod day23;
+mod day24;
 mod day3;
 mod day4;
 mod day5;
@@ -88,8 +89,9 @@ fn main() {
     // println!("*** day22 ***");
     // day22::dispatch_sand();
 
-    println!("*** day23 ***");
-    day23::hike_garden();
+    // println!("*** day23 ***");
+    // day23::hike_garden();
 
-
+    println!("*** day24 ***");
+    day24::split_snow();
 }

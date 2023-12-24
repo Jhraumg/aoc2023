@@ -32,12 +32,12 @@ impl Tile {
     }
 }
 
-struct Map<const SLIPPERY:bool> {
+struct Map<const SLIPPERY: bool> {
     start: (usize, usize),
     end: (usize, usize),
     tiles: Vec<Vec<Tile>>,
 }
-impl<const SLIPPERY:bool> FromStr for Map<SLIPPERY> {
+impl<const SLIPPERY: bool> FromStr for Map<SLIPPERY> {
     type Err = ();
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
@@ -57,14 +57,19 @@ impl<const SLIPPERY:bool> FromStr for Map<SLIPPERY> {
         println!("Map {start:?}=>{end:?}");
         if SLIPPERY {
             Ok(Self { start, end, tiles })
-        }else{
-            let tiles =tiles.into_iter().map(|l|l.into_iter().map(|t|if Tile::Forest==t {t}else{Tile::Path}).collect()).collect();
+        } else {
+            let tiles = tiles
+                .into_iter()
+                .map(|l| {
+                    l.into_iter().map(|t| if Tile::Forest == t { t } else { Tile::Path }).collect()
+                })
+                .collect();
             Ok(Self { start, end, tiles })
         }
     }
 }
 
-impl<const SLIPPERY:bool> Map<SLIPPERY> {
+impl<const SLIPPERY: bool> Map<SLIPPERY> {
     fn walkable(&self, pos: (usize, usize)) -> bool {
         let (x, y) = pos;
         x < self.tiles[0].len() && y < self.tiles.len() && self.tiles[y][x] != Tile::Forest
@@ -131,12 +136,12 @@ impl<const SLIPPERY:bool> Map<SLIPPERY> {
         max_path
     }
 }
-pub fn hike_garden(){
-    let garden:Map<true> = include_str!("../resources/day23_garden.txt").parse().unwrap();
-    let longest_path=garden.longest_path();
+pub fn hike_garden() {
+    let garden: Map<true> = include_str!("../resources/day23_garden.txt").parse().unwrap();
+    let longest_path = garden.longest_path();
     println!("longuest path (slippery) : {longest_path}");
-    let garden:Map<false> = include_str!("../resources/day23_garden.txt").parse().unwrap();
-    let longest_path=garden.longest_path();
+    let garden: Map<false> = include_str!("../resources/day23_garden.txt").parse().unwrap();
+    let longest_path = garden.longest_path();
     println!("longuest path : {longest_path}");
 }
 
