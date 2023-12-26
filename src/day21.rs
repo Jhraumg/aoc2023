@@ -39,7 +39,7 @@ impl FromStr for Garden {
             .unwrap();
         let maxx = s.lines().filter(|l| !l.is_empty()).map(|l| l.trim().len()).max().unwrap();
         let maxy = s.lines().filter(|l| !l.is_empty()).count();
-        assert_eq!(maxx, maxx);
+        assert_eq!(maxx, maxy);
         Ok(Self {
             rocks,
             maxx,

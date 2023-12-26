@@ -46,12 +46,12 @@ impl<const SLIPPERY: bool> FromStr for Map<SLIPPERY> {
             .map(|l| l.chars().filter_map(|c| Tile::from_char(c).ok()).collect())
             .collect();
         let start = (
-            tiles[0].iter().enumerate().filter(|(_, t)| **t == Tile::Path).next().unwrap().0,
+            tiles[0].iter().enumerate().find(|(_, t)| **t == Tile::Path).unwrap().0,
             0,
         );
         let endy = tiles.len() - 1;
         let end = (
-            tiles[endy].iter().enumerate().filter(|(_, t)| **t == Tile::Path).next().unwrap().0,
+            tiles[endy].iter().enumerate().find(|(_, t)| **t == Tile::Path).unwrap().0,
             endy,
         );
         println!("Map {start:?}=>{end:?}");
