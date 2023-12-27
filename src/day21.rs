@@ -1,6 +1,7 @@
+use fxhash::FxHashSet;
 use itertools::Itertools;
 use num::Integer;
-use std::collections::{HashMap, HashSet};
+use std::collections::HashSet;
 use std::str::FromStr;
 
 #[derive(Debug)]
@@ -50,6 +51,15 @@ impl FromStr for Garden {
 }
 
 impl Garden {
+    fn to_relative(&self, pos: (isize, isize)) -> (isize, isize) {
+        let (x, y) = pos;
+        (x - self.start.0 as isize, y - self.start.1 as isize)
+    }
+    fn to_absolute(&self, pos: (isize, isize)) -> (isize, isize) {
+        let (x, y) = pos;
+        (x + self.start.0 as isize, y + self.start.1 as isize)
+    }
+
     fn step(&self, pos: (usize, usize)) -> Vec<(usize, usize)> {
         let (x, y) = pos;
         let west = if x > 0 { Some((x - 1, y)) } else { None };
@@ -101,49 +111,78 @@ impl Garden {
         [(x, y - 1), (x - 1, y), (x, y + 1), (x + 1, y)]
     }
 
-    fn pos_after_n_steps(&self, n: usize) -> usize {
-        // une fois que l'algo marchera
-        let mut count = 0;
-        let mut previous_neither_on_nor_rock: HashSet<(isize, isize)> = HashSet::new();
-        let mut previous_previous_neither_on_nor_rock: HashSet<(isize, isize)> = HashSet::new();
-        let mut previous_on_count = 1;
-        let mut previous_previous_on_count = 0;
+    fn count_reachable_after_n_steps(&self, n: usize) -> usize {
+        let mut not_reached: FxHashSet<(isize, isize)> = Default::default();
+        let mut previous_not_reached: FxHashSet<(isize, isize)> = Default::default();
 
-        previous_neither_on_nor_rock.insert((self.start.0 as isize, self.start.1 as isize));
+        previous_not_reached.insert((self.start.0 as isize, self.start.1 as isize));
+        let maxx = self.maxx as isize;
+        let maxy = self.maxy as isize;
 
-        for i in 0..=n {
-            for y in 0..=i {}
-
-            let on: HashSet<_> = previous_neither_on_nor_rock
-                .iter()
-                .copied()
-                .flat_map(|(x, y)| {
-                    self.istep((x, y)).into_iter().filter(|(x, y)| {
-                        !previous_previous_neither_on_nor_rock.contains(&(*x, *y)) && {
-                            let x =
-                                (x % self.maxx as isize + self.maxx as isize) as usize % self.maxx;
-                            let y =
-                                (y % self.maxy as isize + self.maxy as isize) as usize % self.maxy;
-                            !self.rocks.contains(&(x, y))
-                        }
-                    })
+        for i in 1..=n {
+            // FIXME : dont store all points
+            let i = i as isize;
+            let new_points: FxHashSet<_> = (0..=i)
+                .flat_map(|k| {
+                    let k = k as isize;
+                    [(k, i - k), (k, k - i), (-k, i - k), (-k, k - i)]
+                        .into_iter()
+                        .map(|(x, y)| (x + self.start.0 as isize, y + self.start.1 as isize))
+                        .unique()
                 })
                 .collect();
-            let save = previous_on_count;
-            let new = on.len();
-            previous_on_count = count;
-            count = previous_previous_on_count + new;
-            previous_previous_on_count = save;
-            // if i % 1000 == 0 {
-            println!("{i:3} (+{new} elt) pp {previous_previous_on_count}, p {previous_on_count}, current {count} : {} & {}", count-previous_on_count, count-previous_previous_on_count);
-            // }
+            // println!("\n{i:2} new points {new_points:?}");
+            let new_not_reached_from_rocks: FxHashSet<_> = new_points
+                .iter()
+                .filter(|(i, j)| {
+                    self.rocks.contains(&(
+                        ((maxx + (i % maxx)) % maxx) as usize,
+                        ((maxy + (j % maxy)) % maxy) as usize,
+                    ))
+                })
+                .copied()
+                .collect();
+            // println!("new rocks {new_not_reached_from_rocks:?}");
+            let occulted: FxHashSet<_> = new_points
+                .iter()
+                .filter(|(x, y)| {
+                    [(*x + 1, *y), (*x - 1, *y), (*x, *y + 1), (*x, *y - 1)].into_iter().all(|p| {
+                        let (x, y) = self.to_relative(p);
+                        x.abs() + y.abs() >= i  || not_reached.contains(&p)
+                    })
+                })
+                .copied()
+                .collect();
+            // println!("{i:2} occulted {occulted:?}");
 
-            // println!("on {on:?}");
-            previous_previous_neither_on_nor_rock = previous_neither_on_nor_rock;
-            previous_neither_on_nor_rock = on;
+            let newly_reached: FxHashSet<_> = previous_not_reached
+                .iter()
+                .filter(|(x, y)| !self.rocks.contains(&(
+                    ((maxx + (*x % maxx)) % maxx) as usize,
+                    ((maxy + (*y % maxy)) % maxy) as usize,
+                )) &&
+                    [(*x + 1, *y), (*x - 1, *y), (*x, *y + 1), (*x, *y - 1)]
+                        .into_iter()
+                        .any(|(x, y)| !not_reached.contains(&(x, y)))
+                )
+                .copied()
+                .collect();
+            // println!("{i:2} newly_reached {newly_reached:?}");
+
+            let save = not_reached.clone();
+            not_reached = new_not_reached_from_rocks
+                .union(&occulted)
+                .chain(previous_not_reached.iter())
+                .filter(|nr| !newly_reached.contains(*nr))
+                .copied()
+                .collect();
+            previous_not_reached = save;
+            // println!("{i:2} => not_reached {not_reached:?}");
         }
 
-        count
+        println!("for {n}, not _reached is {} long", not_reached.len());
+
+        (n + 1) * (n + 1) - not_reached.len()
     }
 
     fn infinite_pos_after_n_steps(&self, n: usize) -> usize {
@@ -196,9 +235,9 @@ impl Garden {
 }
 pub fn walk_exercise() {
     let garden: Garden = include_str!("../resources/day21_garden.txt").parse().unwrap();
-    let max_pos = garden.pos_after_n_steps(64);
+    let max_pos = garden.naive_pos_after_n_steps(64);
     println!("pos after 64 steps : {max_pos}");
-    let max_pos = garden.pos_after_n_steps(26501365);
+    let max_pos = garden.naive_pos_after_n_steps(26501365);
     println!("pos after 26501365 steps : {max_pos}");
 }
 #[cfg(test)]
@@ -222,13 +261,17 @@ mod tests {
         "}
         .parse()
         .unwrap();
+
         // assert_eq!(16, garden.naive_pos_after_n_steps(6));
-        assert_eq!(16, garden.pos_after_n_steps(6));
-        assert_eq!(50, garden.pos_after_n_steps(10));
-        // assert_eq!(50, garden.infinite_pos_after_n_steps(10));
-        // assert_eq!(167004, garden.infinite_pos_after_n_steps(500));
-        // assert_eq!(668697, garden.infinite_pos_after_n_steps(1000));
-        // assert_eq!(16733044, garden.infinite_pos_after_n_steps(5000));
+        // assert_eq!(2, garden.count_reachable_after_n_steps(1));
+        // assert_eq!(4, garden.count_reachable_after_n_steps(2));
+        assert_eq!(6, garden.count_reachable_after_n_steps(3));
+
+        assert_eq!(16, garden.count_reachable_after_n_steps(6));
+        assert_eq!(50, garden.count_reachable_after_n_steps(10));
+        assert_eq!(167004, garden.count_reachable_after_n_steps(500));
+        assert_eq!(668697, garden.count_reachable_after_n_steps(1000));
+        assert_eq!(16733044, garden.count_reachable_after_n_steps(5000));
 
         //
         //
