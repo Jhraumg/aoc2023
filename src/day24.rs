@@ -1,10 +1,9 @@
 use eyre::{eyre, Error};
 use itertools::Itertools;
-use std::str::FromStr;
-use indoc::indoc;
 use num::Integer;
+use std::str::FromStr;
 
-#[derive(Debug, Copy, Clone, PartialEq,Eq,Hash )]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
 struct Hail {
     x: isize,
     y: isize,
@@ -40,21 +39,30 @@ impl FromStr for Hail {
     }
 }
 impl Hail {
-    fn pos(&self, t:isize)->(isize,isize,isize){
-        (self.x+t*self.vx,self.y+t*self.vy,self.z+t*self.vz)
-    }
     fn may_cross(hail1: &Hail, hail2: &Hail) -> Option<(f64, f64)> {
-        ///
-        /// x1+t1vx1 =x2+t2vx2 && y1+t1vy1=y2+t2vy2
-        ///t1vx1-t2vx2 = x2-X1 && t1vy1-t2vy2=y2-y1
-        ///   *vy2                      * -vx2
-        /// t1(vx1*vy2-vy1*vx2)=vy2(x2-x1)-vx2(y2-y1)
-        ///t1 =  vy2(x2-x1)-vx2(y2-y1) /(vx1*vy2-vy1*vx2)
-        ///
-        let &Hail{x:x1, y:y1,z:z1, vx:vx1,vy:vy1,vz:vz1}=hail1;
-        let &Hail{x:x2, y:y2,z:z2, vx:vx2,vy:vy2,vz:vz2}=hail2;
-        let (x1,y1,vx1,vy1)=(x1 as f64, y1 as f64, vx1 as f64, vy1 as f64);
-        let (x2,y2,vx2,vy2)=(x2 as f64, y2 as f64, vx2 as f64, vy2 as f64);
+        // x1+t1vx1 =x2+t2vx2 && y1+t1vy1=y2+t2vy2
+        //t1vx1-t2vx2 = x2-X1 && t1vy1-t2vy2=y2-y1
+        //   *vy2                      * -vx2
+        // t1(vx1*vy2-vy1*vx2)=vy2(x2-x1)-vx2(y2-y1)
+        //t1 =  vy2(x2-x1)-vx2(y2-y1) /(vx1*vy2-vy1*vx2)
+        let &Hail {
+            x: x1,
+            y: y1,
+            z: _z1,
+            vx: vx1,
+            vy: vy1,
+            vz: _vz1,
+        } = hail1;
+        let &Hail {
+            x: x2,
+            y: y2,
+            z: _z2,
+            vx: vx2,
+            vy: vy2,
+            vz: _vz2,
+        } = hail2;
+        let (x1, y1, vx1, vy1) = (x1 as f64, y1 as f64, vx1 as f64, vy1 as f64);
+        let (x2, y2, vx2, vy2) = (x2 as f64, y2 as f64, vx2 as f64, vy2 as f64);
         let discr = vx1 * vy2 - vy1 * vx2;
         if discr == 0.0 {
             return None;
@@ -78,25 +86,25 @@ impl Hail {
     }
 }
 
-fn split_all(hails:&[Hail])->isize{
+fn split_all(hails: &[Hail]) -> isize {
     // for any point i, Z+Ti.VZ = Zi+Ti.VZi => Z = Zi +(VZi-VZ) => Z = Zi % (VZi-VZ)
     // we've already done that this year !
-    let mut vz =0;
-    let mut z = 0;
+    let mut vz = 0;
+    let mut z;
 
     'main: loop {
         vz += 1;
-        z=0;
+        z = 0;
 
         let mut md = 1;
         'inner: for h in hails.iter().filter(|h| h.vz < vz) {
-            let dv = vz -h.vz;
-            for _ in 0..dv  {
-                if (h.z-z ) %  dv == 0 {
+            let dv = vz - h.vz;
+            for _ in 0..dv {
+                if (h.z - z) % dv == 0 {
                     md = md.lcm(&dv);
                     continue 'inner;
                 }
-                if z > isize::MAX -md {
+                if z > isize::MAX - md {
                     continue 'main;
                 }
                 z += md;
@@ -107,17 +115,17 @@ fn split_all(hails:&[Hail])->isize{
     }
 
     let h0 = hails.first().unwrap();
-    let h1 = hails.iter().nth(1).unwrap();
-    let t0 = (z-h0.z)/(h0.vz- vz);
-    let t1 = (z-h1.z)/(h1.vz- vz);
+    let h1 = hails.get(1).unwrap();
+    let t0 = (z - h0.z) / (h0.vz - vz);
+    let t1 = (z - h1.z) / (h1.vz - vz);
 
     // x+ti*vx = hi.x + ti*h.vx => vx*(t0-t1) = h0.x+t0*h0.vx -h1.x+t1*h1.vx
-    let vx = (h0.x+t0* h0.vx -h1.x -t1*h1.vx)/(t0-t1);
-    let vy = (h0.y+t0* h0.vy -h1.y -t1*h1.vy)/(t0-t1);
-    let x= h0.x+t0* h0.vx -t0*vx;
-    let y= h0.y+t0* h0.vy -t0*vy;
+    let vx = (h0.x + t0 * h0.vx - h1.x - t1 * h1.vx) / (t0 - t1);
+    let vy = (h0.y + t0 * h0.vy - h1.y - t1 * h1.vy) / (t0 - t1);
+    let x = h0.x + t0 * h0.vx - t0 * vx;
+    let y = h0.y + t0 * h0.vy - t0 * vy;
 
-    x+y+z
+    x + y + z
 }
 
 /// Part 2
@@ -138,10 +146,8 @@ pub fn split_snow() {
 
     println!("potential cross count {cross_count}");
 
-
-    let sum=split_all(&hails);
+    let sum = split_all(&hails);
     println!("x+y+z ={sum}");
-
 }
 #[cfg(test)]
 mod tests {

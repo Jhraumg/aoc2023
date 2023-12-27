@@ -103,22 +103,23 @@ impl Garden {
 
     fn pos_after_n_steps(&self, n: usize) -> usize {
         // une fois que l'algo marchera
-        let mut on: HashSet<(isize, isize)> = HashSet::with_capacity(4 * n);
         let mut count = 0;
-        let mut previous_on: HashSet<(isize, isize)> = HashSet::with_capacity(4 * n);
-        let mut previous_previous_on: HashSet<(isize, isize)> = HashSet::with_capacity(4 * n);
+        let mut previous_neither_on_nor_rock: HashSet<(isize, isize)> = HashSet::new();
+        let mut previous_previous_neither_on_nor_rock: HashSet<(isize, isize)> = HashSet::new();
         let mut previous_on_count = 1;
         let mut previous_previous_on_count = 0;
 
-        previous_on.insert((self.start.0 as isize, self.start.1 as isize));
+        previous_neither_on_nor_rock.insert((self.start.0 as isize, self.start.1 as isize));
 
         for i in 0..=n {
-            let on: HashSet<_> = previous_on
+            for y in 0..=i {}
+
+            let on: HashSet<_> = previous_neither_on_nor_rock
                 .iter()
                 .copied()
                 .flat_map(|(x, y)| {
                     self.istep((x, y)).into_iter().filter(|(x, y)| {
-                        !previous_previous_on.contains(&(*x, *y)) && {
+                        !previous_previous_neither_on_nor_rock.contains(&(*x, *y)) && {
                             let x =
                                 (x % self.maxx as isize + self.maxx as isize) as usize % self.maxx;
                             let y =
@@ -133,13 +134,13 @@ impl Garden {
             previous_on_count = count;
             count = previous_previous_on_count + new;
             previous_previous_on_count = save;
-            if i % 1000 == 0 {
-                println!("{i:3} (+{new} elt) pp {previous_previous_on_count}, p {previous_on_count}, current {count}");
-            }
+            // if i % 1000 == 0 {
+            println!("{i:3} (+{new} elt) pp {previous_previous_on_count}, p {previous_on_count}, current {count} : {} & {}", count-previous_on_count, count-previous_previous_on_count);
+            // }
 
             // println!("on {on:?}");
-            previous_previous_on = previous_on;
-            previous_on = on;
+            previous_previous_neither_on_nor_rock = previous_neither_on_nor_rock;
+            previous_neither_on_nor_rock = on;
         }
 
         count

@@ -1,6 +1,5 @@
 use itertools::Itertools;
 use std::cmp::{max, min};
-use std::collections::{HashMap, HashSet};
 use std::str::FromStr;
 
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
@@ -78,8 +77,7 @@ impl Stack {
     fn count_removeable(&self) -> usize {
         self.bricks
             .iter()
-            .enumerate()
-            .filter(|(i, (h, b))| {
+            .filter(|(h, b)| {
                 let level = *h + b.height;
                 let supported: Vec<_> = self
                     .bricks

@@ -1,9 +1,9 @@
 use eyre::{eyre, Error};
-use std::cmp::max;
-use std::collections::HashSet;
+use fxhash::FxHashSet;
+use itertools::Itertools;
 use std::str::FromStr;
 
-#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
 enum Dir {
     N,
     W,
@@ -37,6 +37,11 @@ struct Map<const SLIPPERY: bool> {
     end: (usize, usize),
     tiles: Vec<Vec<Tile>>,
 }
+#[derive(Debug, Clone)]
+struct Alternative {
+    src: (usize, usize),
+    alts: Vec<(usize, usize)>,
+}
 impl<const SLIPPERY: bool> FromStr for Map<SLIPPERY> {
     type Err = ();
 
@@ -54,7 +59,6 @@ impl<const SLIPPERY: bool> FromStr for Map<SLIPPERY> {
             tiles[endy].iter().enumerate().find(|(_, t)| **t == Tile::Path).unwrap().0,
             endy,
         );
-        println!("Map {start:?}=>{end:?}");
         if SLIPPERY {
             Ok(Self { start, end, tiles })
         } else {
@@ -104,33 +108,76 @@ impl<const SLIPPERY: bool> Map<SLIPPERY> {
             }
         }
     }
-    fn longest_path(self) -> usize {
-        let mut paths: Vec<(HashSet<(usize, usize)>, (usize, usize))> =
-            vec![([self.start].into_iter().collect(), self.start)];
-        let mut max_path: usize = 0;
 
+    // FIXME : store only cross + distance between cross
+
+    fn longest_path_depth_first(&self) -> usize {
+        let mut max_path = 0;
+        let mut current = self.start;
+        let mut previous = self.start;
+        let mut alternatives_and_len: Vec<(Alternative, usize)> = Default::default();
+        let mut current_len = 0;
         loop {
-            let mut new_paths: Vec<_> = Vec::with_capacity(paths.len());
-            for (path, pos) in paths.iter() {
-                for p in self
-                    .raw_step(*pos)
-                    .into_iter()
-                    .filter(|p| self.walkable(*p) && !path.contains(p))
-                {
-                    if p == self.end {
-                        max_path = max(max_path, path.len());
+            if current == self.end && current_len > max_path {
+                println!(
+                    "better path {current_len},still {} alternatives depth",
+                    alternatives_and_len.len()
+                );
+                max_path = current_len;
+            }
+            let crosses: FxHashSet<(usize, usize)> =
+                alternatives_and_len.iter().map(|(alt, _)| alt.src).collect();
+
+            let next = self
+                .raw_step(current)
+                .into_iter()
+                .filter(|p| self.walkable(*p) && *p != previous && !crosses.contains(p))
+                .collect_vec();
+            match next.len() {
+                0 => {
+                    while let Some((cross, _)) = alternatives_and_len.last() {
+                        if cross.alts.is_empty() {
+                            alternatives_and_len.pop();
+                        } else {
+                            break;
+                        }
+                    }
+                    // backtrack
+                    if let Some((cross, l)) = alternatives_and_len.pop() {
+                        previous = cross.src;
+                        current = *cross.alts.first().unwrap();
+                        current_len = l;
+                        alternatives_and_len.push((
+                            Alternative {
+                                alts: cross.alts[1..].to_vec(),
+                                ..cross
+                            },
+                            l,
+                        ))
                     } else {
-                        let mut new_path = path.clone();
-                        new_path.insert(p);
-                        new_paths.push((new_path, p));
+                        break;
                     }
                 }
-            }
+                1 => {
+                    // regular path
+                    previous = current;
+                    current_len += 1;
+                    current = next[0];
+                }
 
-            if new_paths == paths {
-                break;
+                _ => {
+                    // branching (cross)
+                    let alt = Alternative {
+                        src: current,
+                        alts: next[1..].to_vec(),
+                    };
+                    previous = current;
+                    current_len += 1;
+                    current = next[0];
+
+                    alternatives_and_len.push((alt, current_len));
+                }
             }
-            paths = new_paths;
         }
 
         max_path
@@ -138,11 +185,11 @@ impl<const SLIPPERY: bool> Map<SLIPPERY> {
 }
 pub fn hike_garden() {
     let garden: Map<true> = include_str!("../resources/day23_garden.txt").parse().unwrap();
-    let longest_path = garden.longest_path();
-    println!("longuest path (slippery) : {longest_path}");
+    let longest_path = garden.longest_path_depth_first();
+    println!("longest path (slippery) : {longest_path}");
     let garden: Map<false> = include_str!("../resources/day23_garden.txt").parse().unwrap();
-    let longest_path = garden.longest_path();
-    println!("longuest path : {longest_path}");
+    let longest_path = garden.longest_path_depth_first();
+    println!("longest path : {longest_path}");
 }
 
 #[cfg(test)]
@@ -178,8 +225,8 @@ mod tests {
             #####################.#
         "};
         let map: Map<true> = input.parse().unwrap();
-        assert_eq!(94, map.longest_path());
+        assert_eq!(94, map.longest_path_depth_first());
         let map: Map<false> = input.parse().unwrap();
-        assert_eq!(154, map.longest_path());
+        assert_eq!(154, map.longest_path_depth_first());
     }
 }
