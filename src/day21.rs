@@ -1,11 +1,10 @@
 use fxhash::{FxHashMap, FxHashSet};
 use itertools::Itertools;
-use num::{abs, Integer};
-use std::cmp::{max, min};
-use std::collections::{HashMap, HashSet};
-use std::io::{stdout, Write};
-use std::str::FromStr;
+use num::Integer;
 use rayon::prelude::*;
+use std::cmp::max;
+use std::collections::HashMap;
+use std::str::FromStr;
 
 #[derive(Debug)]
 struct Garden {
@@ -91,11 +90,11 @@ impl Garden {
 
         let n = n as isize;
 
-        for y in (-n..=n) {
+        for y in -n..=n {
             if (y - self.max_p) % self.period == 0 {
                 println!();
             }
-            for x in (-n..=n) {
+            for x in -n..=n {
                 if (x - self.max_p) % self.period == 0 {
                     print!("  ");
                 }
@@ -157,16 +156,6 @@ impl Garden {
             }
         }
         rank_reached
-    }
-    fn count_reachable(&self, even: bool) -> usize {
-        // FIXME : just for the provided garden
-        (self.min_p..self.max_p)
-            .flat_map(|y| {
-                (self.min_p..self.max_p).filter(move |x| {
-                    even == ((x.abs() + y.abs()) % 2 == 0) && !self.is_rock((*x, y))
-                })
-            })
-            .count()
     }
 
     fn count_rocks_by_steps(&self, n: usize) -> usize {
@@ -236,28 +225,14 @@ impl Garden {
         direct_count + full_squares + part_squares
     }
 
-    fn count_reachable_after_n_steps(&self, ignore: isize, n: usize) -> usize {
-        println!("count_reachable_after_n_steps({n})");
+    fn count_reachable_after_n_steps(&self, n: usize) -> usize {
+        // println!("count_reachable_after_n_steps({n})");
         let mut not_reached: FxHashSet<(isize, isize)> = Default::default();
         let mut previous_not_reached: FxHashSet<(isize, isize)> = Default::default();
 
         previous_not_reached.insert((0, 0));
-        let period = self.max_p - self.min_p;
 
-        let full_square_l = if n as isize / period > 2 {
-            n as isize / period - 2
-        } else {
-            0
-        };
-        let full_square_l = min(ignore, full_square_l);
-
-        for i in (full_square_l) * period..=n as isize {
-            let i = i as isize;
-
-            /// **TODO remove points inside already counted squares**
-            // println!("\n{i:2} new points {new_points:?}");
-
-            // println!("{i:2} new rocks {new_not_reached_from_rocks:?}");
+        for i in 0..=n as isize {
             let occulted: FxHashSet<_> = (0..=i)
                 .flat_map(|k| [(k, i - k), (k, k - i), (-k, i - k), (-k, k - i)].into_iter())
                 .filter(|p| !self.is_rock(*p))
@@ -309,26 +284,26 @@ impl Garden {
         (n + 1) * (n + 1) - self.count_rocks_by_steps(n) - not_reached.len()
     }
 
+    /// compute the count knowing that it takes `pediod` to cross a square both horizontally and vertically
     fn opt_count_reachable_after_n_steps(&self, n: usize) -> usize {
         println!("opt_count_reachable_after_n_steps({n})");
 
         let base_time_to_reach = self.get_time_to_reach_base();
         let bttr = &base_time_to_reach;
-        let full_reach_even =        (self.min_p..self.max_p)
+        let full_reach_even = (self.min_p..self.max_p)
             .flat_map(|y| {
                 (self.min_p..self.max_p).filter(move |x| {
-                    let v =bttr.get(&(*x,y)).copied().unwrap_or(0);
-                    v>0 && v%2==0
+                    let v = bttr.get(&(*x, y)).copied().unwrap_or(0);
+                    v > 0 && v % 2 == 0
                 })
             })
             .count() as isize;
 
-
-        let full_reach_odd  =        (self.min_p..self.max_p)
+        let full_reach_odd = (self.min_p..self.max_p)
             .flat_map(|y| {
                 (self.min_p..self.max_p).filter(move |x| {
-                    let v =bttr.get(&(*x,y)).copied().unwrap_or(0);
-                    v>0 && v%2==1
+                    let v = bttr.get(&(*x, y)).copied().unwrap_or(0);
+                    v > 0 && v % 2 == 1
                 })
             })
             .count() as isize;
@@ -336,154 +311,77 @@ impl Garden {
         let n = n as isize;
         let period = self.period;
         let edges_pos = (period - 1) / 2;
-        let k = (n as isize - edges_pos) / self.period ;
+        let k = (n - edges_pos) / self.period;
         if k < 0 {
             panic!("not handled here");
         }
 
-        let get_reachable:&dyn Fn(isize,isize)->bool = &|x,y|{println!("get_reachable({x},{y})");(x.abs() + edges_pos) / period + (y.abs() + edges_pos) / period >= k && {
-            let o = if x.abs() > edges_pos {
-                (x.abs() - edges_pos - 1) / period
-            } else {
-                0
-            };
-            let p = if y.abs() > edges_pos {
-                (y.abs() - edges_pos - 1) / period
-            } else {
-                0
-            };
-            let modx = x - x.signum() * o * period;
-            let mody = y - y.signum() * p * period;
-            base_time_to_reach
-                .get(&(modx, mody))
-                .map(|r| *r + o * period + p * period)
-                .map(|v| v.abs() <= n && v.abs() % 2 == n % 2)
-                .unwrap_or(false)}
+        let full_squares_count = if k > 0 {
+            k * k
+                * if (n + k).is_even() {
+                    full_reach_odd
+                } else {
+                    full_reach_even
+                }
+                + (k - 1)
+                    * (k - 1)
+                    * if (n + k).is_even() {
+                        full_reach_even
+                    } else {
+                        full_reach_odd
+                    }
+        } else {
+            0
         };
-
-
-
-        let full_squares_count= if k >0 {
-            k  * k  * if (n+k).is_even() { full_reach_odd }else { full_reach_even }
-                + (k-1) * (k-1) * if (n+k).is_even() { full_reach_even }else{full_reach_odd}
-        }else{0};
         println!("full squares count : {full_squares_count}");
 
         println!("considering {k} square around origin sq");
 
-        // let north_east= (edges_pos+1..=edges_pos+period).flat_map(|x|(-n+x..=-edges_pos-(k-1)*period-1).filter(move|y|get_reachable(x,*y))).count();
-        // let north_west= (-edges_pos-period..=-edges_pos+1).flat_map(|x|(-n+x..=-edges_pos-(k-1)*period-1).filter(move|y|get_reachable(x,*y))).count();
-        // let south_east= (edges_pos+1..=edges_pos+period).flat_map(|x|( edges_pos+(k-1)*period+1 ..=n-x).filter(move|y|get_reachable(x,*y))).count();
-        // let south_west= (-edges_pos-period..=-edges_pos+1).flat_map(|x|(edges_pos+(k-1)*period+1 ..=n-x).filter(move|y|get_reachable(x,*y))).count();
-        // let north = (-edges_pos..=edges_pos).flat_map(|x|(-n+x..=-edges_pos-k*period-1).filter(move|y|get_reachable(x,*y))).count();
-        // let south = (-edges_pos..=edges_pos).flat_map(|x|(edges_pos+k*period+1..=n-x).filter(move|y|get_reachable(x,*y))).count();
-
-        // let mut extra:usize = 0;
-        // let mut extra_loop: FxHashSet<(isize,isize)>=Default::default();
-        // println!("extra {extra} extra loop : {}",extra_loop.len());
-        // for y in 0..=n{
-        //     for x in max(0,(k-1)*period-y)..=n-y{
-        //         for (x,y) in  [(x, y), (-x, y), (x, -y), (-x, -y)].into_iter().unique(){
-        //             if get_reachable(x,y){
-        //                 // println!("- {x},{y}");
-        //                 extra_loop.insert((x,y));
-        //                 extra+=1
-        //             }
-        //         }
-        //     }
-        // }
-        // let extra_loop = &mut extra_loop;
-        // println!("extra {extra} extra loop : {}",extra_loop.len());
-        let extra  = (0..=n).into_par_iter()
+        let extra = (0..=n)
+            .into_par_iter()
             .map(|y| {
-
-                let get_reachable:&dyn Fn(isize,isize)->bool = &|x,y|{(x.abs() + edges_pos) / period + (y.abs() + edges_pos) / period >= k && {
-                    let o = if x.abs() > edges_pos {
-                        (x.abs() - edges_pos - 1) / period
-                    } else {
-                        0
-                    };
-                    let p = if y.abs() > edges_pos {
-                        (y.abs() - edges_pos - 1) / period
-                    } else {
-                        0
-                    };
-                    let modx = x - x.signum() * o * period;
-                    let mody = y - y.signum() * p * period;
-                    base_time_to_reach
-                        .get(&(modx, mody))
-                        .map(|r| *r + o * period + p * period)
-                        .map(|v| v.abs() <= n && v.abs() % 2 == n % 2)
-                        .unwrap_or(false)}
+                let get_reachable: &dyn Fn(isize, isize) -> bool = &|x, y| {
+                    (x.abs() + edges_pos) / period + (y.abs() + edges_pos) / period >= k && {
+                        let o = if x.abs() > edges_pos {
+                            (x.abs() - edges_pos - 1) / period
+                        } else {
+                            0
+                        };
+                        let p = if y.abs() > edges_pos {
+                            (y.abs() - edges_pos - 1) / period
+                        } else {
+                            0
+                        };
+                        let modx = x - x.signum() * o * period;
+                        let mody = y - y.signum() * p * period;
+                        base_time_to_reach
+                            .get(&(modx, mody))
+                            .map(|r| *r + o * period + p * period)
+                            .map(|v| v.abs() <= n && v.abs() % 2 == n % 2)
+                            .unwrap_or(false)
+                    }
                 };
 
-
-
                 (max(0isize, (k - 1) * period - y)..=n - y)
-                    .map(|x| [(x, y), (-x, y), (x, -y), (-x, -y)].into_iter().unique().filter(|(x, y)|  get_reachable(*x, *y)).count()).sum::<usize>()
-            }
-            )
+                    .map(|x| {
+                        [(x, y), (-x, y), (x, -y), (-x, -y)]
+                            .into_iter()
+                            .unique()
+                            .filter(|(x, y)| get_reachable(*x, *y))
+                            .count()
+                    })
+                    .sum::<usize>()
+            })
             .sum::<usize>();
 
-        let _= stdout().flush();
-        // println!("extra_set {}",extra);
-        // println!("missing {:?}", extra_loop.difference(&extra_set).collect_vec());
-        // println!("extra set {extra_set:?}");
-        // (
-        //
-        //     (0..=n).flat_map(|y|{
-        //         (max(0,(k-1)*period-y)..=n-y).flat_map(move |x| [(x, y), (-x, y), (x, -y), (-x, -y)].into_iter())
-        // }).unique().filter(|(x, y)| {
-        //         // if (x.abs() + edges_pos) / period + (y.abs() + edges_pos) / period >= k && x.abs()==0 {
-        //         //     println!("examiing ({x},{y}) =>{:?}", {
-        //         //         let o = if x.abs() > edges_pos {
-        //         //             (x.abs() - edges_pos - 1) / period
-        //         //         } else {
-        //         //             0
-        //         //         };
-        //         //         let p = if y.abs() > edges_pos {
-        //         //             (y.abs() - edges_pos - 1) / period
-        //         //         } else {
-        //         //             0
-        //         //         };
-        //         //         let modx = x - x.signum() * o * period;
-        //         //         let mody = y - y.signum() * p * period;
-        //         //         base_time_to_reach
-        //         //             .get(&(modx, mody))
-        //         //             .map(|r| *r + o * period + p * period)
-        //         //             .map(|v| v.abs() <= n && v.abs() % 2 == n % 2)
-        //         //             .unwrap_or(false)
-        //         //     });
-        //         // }
-        //         (x.abs() + edges_pos) / period + (y.abs() + edges_pos) / period >= k && {
-        //             let o = if x.abs() > edges_pos {
-        //                 (x.abs() - edges_pos - 1) / period
-        //             } else {
-        //                 0
-        //             };
-        //             let p = if y.abs() > edges_pos {
-        //                 (y.abs() - edges_pos - 1) / period
-        //             } else {
-        //                 0
-        //             };
-        //             let modx = x - x.signum() * o * period;
-        //             let mody = y - y.signum() * p * period;
-        //             base_time_to_reach
-        //                 .get(&(modx, mody))
-        //                 .map(|r| *r + o * period + p * period)
-        //                 .map(|v| v.abs() <= n && v.abs() % 2 == n % 2)
-        //                 .unwrap_or(false)
-        //         }
-        //     })
-        //     .count() as isize
-            extra + full_squares_count as usize
+        extra + full_squares_count as usize
     }
 }
 pub fn walk_exercise() {
     let garden: Garden = include_str!("../resources/day21_garden.txt").parse().unwrap();
     garden.naive_pos_after_n_steps(garden.period as usize);
 
-    let max_pos = garden.count_reachable_after_n_steps(0, 64);
+    let max_pos = garden.count_reachable_after_n_steps(64);
     println!("pos after 64 steps : {max_pos}");
 
     let max_pos = garden.opt_count_reachable_after_n_steps(26501365);
@@ -529,28 +427,12 @@ mod tests {
         "}
         .parse()
         .unwrap();
-        // for i in garden.period..3*garden.period{
-        //     println!("*** {}", garden.opt_count_reachable_after_n_steps(i as usize)-garden.opt_count_reachable_after_n_steps(i as usize -1));
-        // }
-
-        assert_eq!(
-            garden.naive_pos_after_n_steps(10),
-            garden.opt_count_reachable_after_n_steps(10)
-        );
-
-
-        assert_eq!(
-            garden.naive_pos_after_n_steps(19),
-            garden.opt_count_reachable_after_n_steps(19)
-        );
-        assert_eq!(
-            garden.count_reachable_after_n_steps(0, 200),
-            garden.opt_count_reachable_after_n_steps(200)
-        );
-        assert_eq!(
-            garden.count_reachable_after_n_steps(0, 500),
-            garden.opt_count_reachable_after_n_steps(500)
-        );
+        for l in [10, 19, 200] {
+            assert_eq!(
+                garden.naive_pos_after_n_steps(l),
+                garden.opt_count_reachable_after_n_steps(l)
+            );
+        }
 
         let garden: Garden = indoc! {"
             ...........
@@ -573,58 +455,27 @@ mod tests {
                 naive_count_rocks(&garden, i),
                 garden.count_rocks_by_steps(i)
             );
-            // assert_eq!(garden.naive_pos_after_n_steps(i), garden.count_reachable_after_n_steps(i));
         }
+        assert_eq!(4, garden.count_reachable_after_n_steps(2));
+        assert_eq!(6, garden.count_reachable_after_n_steps(3));
 
-        // assert_eq!(16, garden.naive_pos_after_n_steps(6));
+        assert_eq!(16, garden.count_reachable_after_n_steps(6));
+        assert_eq!(50, garden.count_reachable_after_n_steps(10));
 
-        let garden:Garden=include_str!("../resources/day21_garden.txt").parse().unwrap();
-        // garden.get_time_to_reach_base();
-        assert_eq!(garden.opt_count_reachable_after_n_steps(130), garden.count_reachable_after_n_steps(0,130));
-        assert_eq!(garden.opt_count_reachable_after_n_steps(1000), garden.count_reachable_after_n_steps(0,1000));
-        // assert_eq!(4, garden.count_reachable_after_n_steps(2));
-        // assert_eq!(garden.naive_pos_after_n_steps(50),garden.count_reachable_after_n_steps(50));
-        // assert_eq!(6, garden.count_reachable_after_n_steps(3));
-        //
-        // assert_eq!(16, garden.count_reachable_after_n_steps(6));
-        // assert_eq!(50, garden.count_reachable_after_n_steps(10));
+        assert_eq!(167004, garden.count_reachable_after_n_steps(500));
+        assert_eq!(668697, garden.count_reachable_after_n_steps(1000));
+        assert_eq!(16733044, garden.count_reachable_after_n_steps(5000));
 
-        // assert_eq!(167004, garden.count_reachable_after_n_steps(500));
-        // assert_eq!(668697, garden.count_reachable_after_n_steps(1000));
-        // assert_eq!(16733044, garden.count_reachable_after_n_steps(5000));
-        // assert_eq!(16733044, garden.opt_count_reachable_after_n_steps(5000));
-    }
+        // checking optimised (not suitable for example) compute against the slower but exact once
 
-    // #[test]
-    fn check_mod() {
-        let n = 2isize;
-        let p = 3isize;
-        let edge = (p - 1) / 2;
-        let m = 2 * n * p;
-
-        for y in -m..=m {
-            for x in -m..=m {
-                if x == 0 && y == 0 {
-                    print!(".")
-                } else {
-                    if (x.abs() + edge) / p + (y.abs() + edge) / p > n {
-                        print!(" ")
-                    } else {
-                        if ((x.abs() + edge) / p + (y.abs() + edge) / p) % 2 == 0 {
-                            print!("0")
-                        } else {
-                            print!("1")
-                        }
-                    };
-                }
-                if (x - edge) % p == 0 {
-                    print!(" ");
-                }
-            }
-            if (y - edge) % p == 0 {
-                println!();
-            }
-            println!()
-        }
+        let garden: Garden = include_str!("../resources/day21_garden.txt").parse().unwrap();
+        assert_eq!(
+            garden.opt_count_reachable_after_n_steps(130),
+            garden.count_reachable_after_n_steps(130)
+        );
+        assert_eq!(
+            garden.opt_count_reachable_after_n_steps(1000),
+            garden.count_reachable_after_n_steps(1000)
+        );
     }
 }
