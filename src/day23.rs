@@ -1,6 +1,7 @@
 use eyre::{eyre, Error};
-use fxhash::FxHashSet;
+use fxhash::{FxHashMap, FxHashSet};
 use itertools::Itertools;
+use std::fmt::{Display, Formatter};
 use std::str::FromStr;
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
@@ -37,10 +38,27 @@ struct Map<const SLIPPERY: bool> {
     end: (usize, usize),
     tiles: Vec<Vec<Tile>>,
 }
+
+#[derive(Debug)]
+struct OrientedGraph {
+    distances: FxHashMap<(usize, usize), Vec<((usize, usize), usize)>>,
+}
+impl Display for OrientedGraph {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        for ((from_x, from_y), tos) in &self.distances {
+            f.write_fmt(format_args!("({from_x},{from_y}):\n"))?;
+            for ((to_x, to_y), d) in tos {
+                f.write_fmt(format_args!("  => ({to_x},{to_y}): {d}\n"))?;
+            }
+        }
+        Ok(())
+    }
+}
+
 #[derive(Debug, Clone)]
 struct Alternative {
     src: (usize, usize),
-    alts: Vec<(usize, usize)>,
+    alts: Vec<((usize, usize), usize)>,
 }
 impl<const SLIPPERY: bool> FromStr for Map<SLIPPERY> {
     type Err = ();
@@ -74,6 +92,57 @@ impl<const SLIPPERY: bool> FromStr for Map<SLIPPERY> {
 }
 
 impl<const SLIPPERY: bool> Map<SLIPPERY> {
+    fn follow_path(
+        &self,
+        path_start: (usize, usize),
+        previous: (usize, usize),
+    ) -> Option<((usize, usize), usize)> {
+        let mut current = Some(path_start);
+        let mut previous = previous;
+        let mut d = 0;
+        while let Some(c) = current {
+            if c == self.end {
+                break;
+            }
+            d += 1;
+            let next = self
+                .raw_step(c)
+                .into_iter()
+                .filter(|n| *n != previous && self.walkable(*n))
+                .collect_vec();
+            if next.len() != 1 {
+                break;
+            }
+            previous = c;
+            current = next.first().copied();
+        }
+        current.map(|c| (c, d))
+    }
+
+    fn build_oriented_graph(&self) -> OrientedGraph {
+        let crosses: FxHashSet<_> = (0..self.tiles.len())
+            .flat_map(|y| (0..self.tiles[0].len()).map(move |x| (x, y)))
+            .filter(|(x, y)| {
+                self.raw_step((*x, *y)).into_iter().filter(|p| self.walkable(*p)).count() > 2
+            })
+            .collect();
+
+        let distances = crosses
+            .iter()
+            .map(|c| {
+                (
+                    *c,
+                    self.raw_step(*c)
+                        .into_iter()
+                        .filter_map(|n| self.follow_path(n, *c))
+                        .collect_vec(),
+                )
+            })
+            .collect();
+
+        OrientedGraph { distances }
+    }
+
     fn walkable(&self, pos: (usize, usize)) -> bool {
         let (x, y) = pos;
         x < self.tiles[0].len() && y < self.tiles.len() && self.tiles[y][x] != Tile::Forest
@@ -109,73 +178,73 @@ impl<const SLIPPERY: bool> Map<SLIPPERY> {
         }
     }
 
-    // FIXME : store only cross + distance between cross
-
     fn longest_path_depth_first(&self) -> usize {
+        // println!("self.start {:?}", self.start);
+        let (first_step, init_d) = self.follow_path(self.start, self.start).unwrap();
+        let graph = self.build_oriented_graph();
         let mut max_path = 0;
-        let mut current = self.start;
-        let mut previous = self.start;
-        let mut alternatives_and_len: Vec<(Alternative, usize)> = Default::default();
-        let mut current_len = 0;
+        let mut current = first_step;
+        let mut alternatives: Vec<Alternative> = Default::default();
+        let mut current_len = init_d;
+
+        const EMPTY: Vec<&((usize, usize), usize)> = vec![];
         loop {
             if current == self.end && current_len > max_path {
-                println!(
-                    "better path {current_len},still {} alternatives depth",
-                    alternatives_and_len.len()
-                );
+                // println!(
+                //     "better path {current_len},still {} alternatives depth",
+                //     alternatives.len()
+                // );
                 max_path = current_len;
             }
-            let crosses: FxHashSet<(usize, usize)> =
-                alternatives_and_len.iter().map(|(alt, _)| alt.src).collect();
 
-            let next = self
-                .raw_step(current)
-                .into_iter()
-                .filter(|p| self.walkable(*p) && *p != previous && !crosses.contains(p))
-                .collect_vec();
-            match next.len() {
-                0 => {
-                    while let Some((cross, _)) = alternatives_and_len.last() {
-                        if cross.alts.is_empty() {
-                            alternatives_and_len.pop();
-                        } else {
-                            break;
-                        }
-                    }
-                    // backtrack
-                    if let Some((cross, l)) = alternatives_and_len.pop() {
-                        previous = cross.src;
-                        current = *cross.alts.first().unwrap();
-                        current_len = l;
-                        alternatives_and_len.push((
-                            Alternative {
-                                alts: cross.alts[1..].to_vec(),
-                                ..cross
-                            },
-                            l,
-                        ))
+            // TODO : mutates visited on backtrack to avoid rebuilding it each time ?
+            let visited: FxHashSet<(usize, usize)> =
+                alternatives.iter().map(|alt| alt.src).collect();
+            // println!("CURRENT {current:?}, visited {}, alternatives {}", visited.len(), alternatives.len());
+
+            // FAST exit (not really efficient)
+            let max_path_len_from_current = current_len
+                + graph
+                    .distances
+                    .iter()
+                    .filter(|(k, _)| **k == current || !visited.contains(*k))
+                    .filter_map(|(_, v)| v.iter().map(|(_, d)| *d).max())
+                    .sum::<usize>();
+
+            let next = graph
+                .distances
+                .get(&current)
+                .map(|v| v.iter().filter(|(n, _)| !visited.contains(n)).collect_vec())
+                .unwrap_or(EMPTY);
+
+            if max_path_len_from_current > max_path && !next.is_empty() {
+                let alt = Alternative {
+                    src: current,
+                    alts: next[1..].iter().map(|(n, d)| (*n, current_len + d)).collect(),
+                };
+                current_len += next[0].1;
+                current = next[0].0;
+
+                alternatives.push(alt);
+            } else {
+                // backtrack
+                while let Some(cross) = alternatives.last() {
+                    if cross.alts.is_empty() {
+                        alternatives.pop();
                     } else {
                         break;
                     }
                 }
-                1 => {
-                    // regular path
-                    previous = current;
-                    current_len += 1;
-                    current = next[0];
-                }
+                if let Some(cross) = alternatives.pop() {
+                    (current, current_len) = *cross.alts.first().unwrap();
+                    // println!("backtracking to {current:?}");
 
-                _ => {
-                    // branching (cross)
-                    let alt = Alternative {
-                        src: current,
-                        alts: next[1..].to_vec(),
-                    };
-                    previous = current;
-                    current_len += 1;
-                    current = next[0];
-
-                    alternatives_and_len.push((alt, current_len));
+                    alternatives.push(Alternative {
+                        alts: cross.alts[1..].to_vec(),
+                        ..cross
+                    })
+                } else {
+                    break;
                 }
             }
         }
@@ -225,8 +294,10 @@ mod tests {
             #####################.#
         "};
         let map: Map<true> = input.parse().unwrap();
+        println!("\ntrue :\n{:}", map.build_oriented_graph());
         assert_eq!(94, map.longest_path_depth_first());
         let map: Map<false> = input.parse().unwrap();
+        println!("\nfalse :\n{:}", map.build_oriented_graph());
         assert_eq!(154, map.longest_path_depth_first());
     }
 }

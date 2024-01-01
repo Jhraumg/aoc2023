@@ -331,10 +331,10 @@ mod tests {
         assert!(factory.all_off());
         factory.push_button();
         assert!(factory.all_off());
-        let mut factory = read_input(input);
+        let factory = read_input(input);
         assert_eq!(32000000, factory.warm());
 
-        let mut factory = read_input(indoc! {"
+        let factory = read_input(indoc! {"
             broadcaster -> a
             %a -> inv, con
             &inv -> b

@@ -88,27 +88,29 @@ impl Garden {
             }
         }
 
-        let n = n as isize;
 
-        for y in -n..=n {
-            if (y - self.max_p) % self.period == 0 {
-                println!();
-            }
-            for x in -n..=n {
-                if (x - self.max_p) % self.period == 0 {
-                    print!("  ");
+        #[cfg(debug_assertions)]
+        {
+            let n = n as isize;
+            for y in -n..=n {
+                if (y - self.max_p) % self.period == 0 {
+                    println!();
                 }
-                if self.is_rock((x, y)) {
-                    print!("###");
-                } else if rank_reached.contains_key(&(x, y)) {
-                    print!("{:3}", rank_reached.get(&(x, y)).unwrap());
-                } else {
-                    print!("...");
+                for x in -n..=n {
+                    if (x - self.max_p) % self.period == 0 {
+                        print!("  ");
+                    }
+                    if self.is_rock((x, y)) {
+                        print!("###");
+                    } else if rank_reached.contains_key(&(x, y)) {
+                        print!("{:3}", rank_reached.get(&(x, y)).unwrap());
+                    } else {
+                        print!("...");
+                    }
                 }
+                println!()
             }
-            println!()
         }
-
         cur_pos.len()
     }
 
@@ -266,27 +268,15 @@ impl Garden {
             previous_not_reached = save;
             // println!("{i:2} => not_reached {not_reached:?}");
 
-            if i % 1000 == 0 {
-                println!(
-                    "for {i} (still {}), not _reached is {} long ",
-                    n as isize - i,
-                    not_reached.len()
-                );
-            }
         }
 
-        println!(
-            "for {n}, not_reached is {} long, oldest is {:?}",
-            not_reached.len(),
-            not_reached.iter().map(|(x, y)| n as isize - x.abs() - y.abs()).max()
-        );
 
         (n + 1) * (n + 1) - self.count_rocks_by_steps(n) - not_reached.len()
     }
 
     /// compute the count knowing that it takes `pediod` to cross a square both horizontally and vertically
     fn opt_count_reachable_after_n_steps(&self, n: usize) -> usize {
-        println!("opt_count_reachable_after_n_steps({n})");
+        // println!("opt_count_reachable_after_n_steps({n})");
 
         let base_time_to_reach = self.get_time_to_reach_base();
         let bttr = &base_time_to_reach;
