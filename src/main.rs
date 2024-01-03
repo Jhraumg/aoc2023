@@ -60,7 +60,7 @@ fn main() {
 
     println!("*** day12 ***");
     // takes > 1mn...
-    // day12::arrange_springs();
+    day12::arrange_springs();
 
     println!("*** day13 ***");
     day13::check_notes();
@@ -87,6 +87,7 @@ fn main() {
     day20::warm_factory();
 
     println!("*** day21 ***");
+    // takes >10mn...
     day21::walk_exercise();
 
     println!("*** day22 ***");
@@ -99,5 +100,6 @@ fn main() {
     day24::split_snow();
 
     println!("*** day25 ***");
+    // takes >1mn...
     day25::fix_machine();
 }

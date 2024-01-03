@@ -188,7 +188,7 @@ impl<const SLIPPERY: bool> Map<SLIPPERY> {
         let mut current_len = init_d;
 
         const EMPTY: Vec<&((usize, usize), usize)> = vec![];
-        loop {
+        loop { // TODO : buffer in 3 or 4 alternatives, and then process them concurrently though rayon
             if current == self.end && current_len > max_path {
                 // println!(
                 //     "better path {current_len},still {} alternatives depth",

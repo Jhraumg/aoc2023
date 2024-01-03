@@ -105,6 +105,9 @@ fn distance_without_direct_link(
 }
 
 fn split_in_two(connections: &FxHashMap<&str, FxHashSet<&str>>) -> usize {
+
+    // targeting segments which egdes are the most far appart when the segment is removed
+    // TODO : try to count which segment belongs to the shortest path between edges could succeed without looping
     let mut cc = connections.clone();
     for _ in 0..3 {
         // getting all 3 at once work for the actual data, not for the test

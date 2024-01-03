@@ -111,7 +111,7 @@ impl Stack {
 
                 let mut current_base = init.0;
                 loop {
-                    let removed: Vec<_> = self.bricks[i + 1..]
+                    let removed: Vec<_> = self.bricks
                         .iter()
                         .enumerate()
                         .filter(|(_, (df_h, _))| *df_h > current_base)
@@ -131,12 +131,11 @@ impl Stack {
                         break;
                     }
                     current_base = removed.iter().map(|(_, h)| **h).min().unwrap();
-                    for (j, _) in removed {
-                        // println!("removing {start_idx} => {df:?} falling");
+                    for (j, _h) in removed {
                         falling[j] = true;
                     }
                 }
-                falling.len() - 1
+                falling.iter().filter(|f|**f).count()-1
             })
             .sum()
     }
@@ -169,6 +168,7 @@ mod tests {
         "};
         let stack: Stack = input.parse().unwrap();
         assert_eq!(5, stack.count_removeable());
+        println!("{stack:?}");
         assert_eq!(7, stack.sum_falling());
     }
 }

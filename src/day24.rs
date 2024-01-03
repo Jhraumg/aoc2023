@@ -41,10 +41,10 @@ impl FromStr for Hail {
 impl Hail {
     fn may_cross(hail1: &Hail, hail2: &Hail) -> Option<(f64, f64)> {
         // x1+t1vx1 =x2+t2vx2 && y1+t1vy1=y2+t2vy2
-        //t1vx1-t2vx2 = x2-X1 && t1vy1-t2vy2=y2-y1
+        // t1vx1-t2vx2 = x2-X1 && t1vy1-t2vy2=y2-y1
         //   *vy2                      * -vx2
         // t1(vx1*vy2-vy1*vx2)=vy2(x2-x1)-vx2(y2-y1)
-        //t1 =  vy2(x2-x1)-vx2(y2-y1) /(vx1*vy2-vy1*vx2)
+        // t1 =  vy2(x2-x1)-vx2(y2-y1) /(vx1*vy2-vy1*vx2)
         let &Hail {
             x: x1,
             y: y1,
@@ -128,9 +128,6 @@ fn split_all(hails: &[Hail]) -> isize {
     x + y + z
 }
 
-/// Part 2
-/// were looking for t such as AtaBtb // AtaCtc
-///
 
 pub fn split_snow() {
     let hails: Vec<Hail> = include_str!("../resources/day24_hails.txt")

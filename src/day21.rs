@@ -227,6 +227,8 @@ impl Garden {
         direct_count + full_squares + part_squares
     }
 
+    /// exact count without any hypothesis on the square structure
+    /// favor non reached count, though, considering it should grow slower than reached count
     fn count_reachable_after_n_steps(&self, n: usize) -> usize {
         // println!("count_reachable_after_n_steps({n})");
         let mut not_reached: FxHashSet<(isize, isize)> = Default::default();
@@ -269,7 +271,6 @@ impl Garden {
             // println!("{i:2} => not_reached {not_reached:?}");
 
         }
-
 
         (n + 1) * (n + 1) - self.count_rocks_by_steps(n) - not_reached.len()
     }
@@ -327,7 +328,7 @@ impl Garden {
 
         println!("considering {k} square around origin sq");
 
-        let extra = (0..=n)
+        let extra = (0..=n) // TODO : direct count of this points, instead of enumerating them
             .into_par_iter()
             .map(|y| {
                 let get_reachable: &dyn Fn(isize, isize) -> bool = &|x, y| {
@@ -453,19 +454,23 @@ mod tests {
         assert_eq!(50, garden.count_reachable_after_n_steps(10));
 
         assert_eq!(167004, garden.count_reachable_after_n_steps(500));
+        #[cfg(not(debug_assertions))]
         assert_eq!(668697, garden.count_reachable_after_n_steps(1000));
+        #[cfg(not(debug_assertions))]
         assert_eq!(16733044, garden.count_reachable_after_n_steps(5000));
 
         // checking optimised (not suitable for example) compute against the slower but exact once
-
-        let garden: Garden = include_str!("../resources/day21_garden.txt").parse().unwrap();
-        assert_eq!(
-            garden.opt_count_reachable_after_n_steps(130),
-            garden.count_reachable_after_n_steps(130)
-        );
-        assert_eq!(
-            garden.opt_count_reachable_after_n_steps(1000),
-            garden.count_reachable_after_n_steps(1000)
-        );
+        #[cfg(not(debug_assertions))]
+        {
+            let garden: Garden = include_str!("../resources/day21_garden.txt").parse().unwrap();
+            assert_eq!(
+                garden.opt_count_reachable_after_n_steps(130),
+                garden.count_reachable_after_n_steps(130)
+            );
+            assert_eq!(
+                garden.opt_count_reachable_after_n_steps(1000),
+                garden.count_reachable_after_n_steps(1000)
+            );
+        }
     }
 }
