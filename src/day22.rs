@@ -111,7 +111,8 @@ impl Stack {
 
                 let mut current_base = init.0;
                 loop {
-                    let removed: Vec<_> = self.bricks
+                    let removed: Vec<_> = self
+                        .bricks
                         .iter()
                         .enumerate()
                         .filter(|(_, (df_h, _))| *df_h > current_base)
@@ -135,7 +136,7 @@ impl Stack {
                         falling[j] = true;
                     }
                 }
-                falling.iter().filter(|f|**f).count()-1
+                falling.iter().filter(|f| **f).count() - 1
             })
             .sum()
     }

@@ -128,7 +128,6 @@ fn split_all(hails: &[Hail]) -> isize {
     x + y + z
 }
 
-
 pub fn split_snow() {
     let hails: Vec<Hail> = include_str!("../resources/day24_hails.txt")
         .lines()
