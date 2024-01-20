@@ -1,11 +1,9 @@
-use fxhash::{FxHashMap, FxHashSet};
-use indoc::indoc;
-use itertools::Itertools;
+use ahash::{AHashMap, AHashSet};
 use num::Integer;
 use rayon::prelude::*;
-use std::cmp::max;
 use std::collections::HashMap;
 use std::str::FromStr;
+use itertools::Itertools;
 
 #[derive(Debug)]
 struct Garden {
@@ -48,9 +46,9 @@ impl FromStr for Garden {
         let min_p = 0 - start_x as isize;
         let max_p = maxx as isize - start_x as isize;
         let period = max_p - min_p;
-        let mut rocks = vec![false;period as usize * period as usize];
-        for (x,y) in src_rocks {
-            rocks[y*period as usize + x] = true;
+        let mut rocks = vec![false; period as usize * period as usize];
+        for (x, y) in src_rocks {
+            rocks[y * period as usize + x] = true;
         }
         Ok(Self {
             rocks,
@@ -73,12 +71,12 @@ impl Garden {
     fn is_rock(&self, p: (isize, isize)) -> bool {
         let (x, y) = p;
 
-        let x = ( (self.period + (x - self.min_p) % self.period) % self.period) as usize;
-        let y = ( (self.period + (y - self.min_p) % self.period) % self.period) as usize;
+        let x = ((self.period + (x - self.min_p) % self.period) % self.period) as usize;
+        let y = ((self.period + (y - self.min_p) % self.period) % self.period) as usize;
         // assert!(x>=self.min_p && x<self.max_p,"{p:?} => {x} [{},{}]",self.min_p,self.max_p);
         // assert!(y>=self.min_p && y<self.max_p, "{p:?} => {y} [{},{}]",self.min_p,self.max_p);
 
-        self.rocks[x+ y *self.period as usize]
+        self.rocks[x + y * self.period as usize]
     }
     fn naive_pos_after_n_steps(&self, n: usize) -> usize {
         let mut rank_reached: HashMap<(isize, isize), usize> = HashMap::new();
@@ -115,59 +113,13 @@ impl Garden {
         cur_pos.len()
     }
 
-    fn get_time_to_reach_base(&self) -> FxHashMap<(isize, isize), isize> {
-        let period = self.period;
-        let n = 3 * period;
-
-        let mut rank_reached: FxHashMap<(isize, isize), isize> = Default::default();
-        let mut cur_pos: Vec<(isize, isize)> = vec![(0, 0)];
-        for k in 0..n {
-            cur_pos = cur_pos.into_iter().flat_map(|p| self.step(p).into_iter()).unique().collect();
-            for (x, y) in &cur_pos {
-                rank_reached.entry((*x, *y)).or_insert(k + 1);
-            }
-        }
-
-        #[cfg(debug_assertions)]
-        {
-            // no need to loop in release
-            let edges_pos = (period - 1) / 2;
-            let mut base: FxHashMap<(isize, isize), usize> = Default::default();
-            for y in -n..n {
-                for x in -n + y..n - y {
-                    let k = if x.abs() > edges_pos {
-                        (x.abs() - edges_pos - 1) / period
-                    } else {
-                        0
-                    };
-                    let p = if y.abs() > edges_pos {
-                        (y.abs() - edges_pos - 1) / period
-                    } else {
-                        0
-                    };
-                    let modx = x - x.signum() * k * period;
-                    let mody = y - y.signum() * p * period;
-                    debug_assert_eq!(
-                        rank_reached.get(&(x, y)).copied(),
-                        rank_reached
-                            .get(&(modx, mody))
-                            .map(|r| *r + k * period + p * period)
-                            .filter(|v| v.abs() <= n)
-                    );
-                    base.entry((modx, mody)).and_modify(|v| *v += 1).or_insert(1);
-                }
-            }
-        }
-        rank_reached
-    }
-
-
     fn count_rocks_by_steps(&self, n: usize) -> usize {
-
         let period = self.period;
         let n = n as isize;
         let k = n / period;
-        if k>0 {println!("n: {n}, period : {period} => k : {k}");}
+        if k > 0 {
+            println!("n: {n}, period : {period} => k : {k}");
+        }
 
         // squares fully covered can only have 2 counts :
         // * either they're on even coordinates, and only rocks having the same parity as n must be counted
@@ -175,62 +127,88 @@ impl Garden {
         // there are (k+1)*(k+1) square with k parity and k² with the other parity
         if k <= 1 {
             return (-n..=n)
-                .map(|i| (-n+i.abs()..=n-i.abs()).step_by(2).filter(|j|self.is_rock((i,*j))).count())
+                .map(|i| {
+                    (-n + i.abs()..=n - i.abs())
+                        .step_by(2)
+                        .filter(|j| self.is_rock((i, *j)))
+                        .count()
+                })
                 .sum::<usize>();
         }
 
-        let (even_count, odd_count)= self.rocks.iter().enumerate().fold((0usize,0usize),|(even_c,odd_c),(i,r)|if *r {
-            match i % 2 {
-                0 => (even_c + 1, odd_c),
-                _ => (even_c, odd_c + 1),
-            }
-        }else {(even_c,odd_c)});
+        let (even_count, odd_count) =
+            self.rocks.iter().enumerate().fold((0usize, 0usize), |(even_c, odd_c), (i, r)| {
+                if *r {
+                    match i % 2 {
+                        0 => (even_c + 1, odd_c),
+                        _ => (even_c, odd_c + 1),
+                    }
+                } else {
+                    (even_c, odd_c)
+                }
+            });
 
-        let full_squares_count = (k as usize ) * (k as usize ) * if (k + n).is_even() { odd_count } else {  even_count} +
-                (k as usize -1 ) * (k as usize-1) * if (k + n).is_even() { even_count } else { odd_count };
+        let full_squares_count = (k as usize)
+            * (k as usize)
+            * if (k + n).is_even() {
+                odd_count
+            } else {
+                even_count
+            }
+            + (k as usize - 1)
+                * (k as usize - 1)
+                * if (k + n).is_even() {
+                    even_count
+                } else {
+                    odd_count
+                };
 
         // println!("k*period - period/2 = {}",k*period - period/2);
 
         // we're counting spots outside full square
-        let outer_count=(-n..=n)
+        let outer_count = (-n..=n)
             // .into_par_iter()
             .map(|i| {
-                if  i.abs() >= k*period - period/2 {
-                    (-n+i.abs()..=n-i.abs()).step_by(2).filter(|j|self.is_rock((i,*j))).count()
-                }
-                else {
+                if i.abs() >= k * period - period / 2 {
+                    (-n + i.abs()..=n - i.abs())
+                        .step_by(2)
+                        .filter(|j| self.is_rock((i, *j)))
+                        .count()
+                } else {
                     // from  [-n + i.abs() ..= n- i..abs()], we need only to cover
                     //  [-n + i.abs().. -l*period -period/2[  and ]l*period+period/2..n-i.abs()]
                     // where l = k - i/period
-                    let l = k - (i.abs()+period/2)/period;
-                    let min_r = l*period-period/2;
+                    let l = k - (i.abs() + period / 2) / period;
+                    let min_r = l * period - period / 2;
 
-                    println!("i={i} => counting uppon [{},{}] and [{},{}]",-n + i.abs(),- min_r, min_r,n - i.abs());
+                    // println!("i={i} => counting uppon [{},{}] and [{},{}]", -n + i.abs(), -min_r, min_r, n - i.abs());
 
-                    (-n + i.abs() ..= - min_r).filter(|j| (i.abs() + j.abs())%2 == n%2 &&  self.is_rock((i,*j))).count() +
-                        (min_r  ..= n - i.abs()).filter(|j| (i.abs() + j.abs())%2 == n%2 &&  self.is_rock((i,*j))).count()
-
+                    (-n + i.abs()..=-min_r)
+                        .filter(|j| (i.abs() + j.abs()) % 2 == n % 2 && self.is_rock((i, *j)))
+                        .count()
+                        + (min_r..=n - i.abs())
+                            .filter(|j| (i.abs() + j.abs()) % 2 == n % 2 && self.is_rock((i, *j)))
+                            .count()
                 }
-            }
+            })
+            .sum::<usize>();
 
-            )
-            .sum::<usize>()        ;
-
-         // println!("count_rocks_by_steps({n}) : full {full_squares_count} + outer {outer_count}");
+        // println!("count_rocks_by_steps({n}) : full {full_squares_count} + outer {outer_count}");
         full_squares_count + outer_count
     }
 
-    /// exact count without any hypothesis on the square structure
-    /// favor non reached count, though, considering it should grow slower than reached count
+    /// Count reachable points by considering storing unreached values.
+    /// * memory wise, if there are no unreachable tiles except rocks, unreached tiles size grows in O(n)
+    /// * computing wise, it is a O(n²) process (0..n)*n
     fn count_reachable_after_n_steps(&self, n: usize) -> usize {
         // println!("count_reachable_after_n_steps({n})");
-        let mut not_reached: FxHashSet<(isize, isize)> = Default::default();
-        let mut previous_not_reached: FxHashSet<(isize, isize)> = Default::default();
+        let mut not_reached: AHashSet<(isize, isize)> = Default::default();
+        let mut previous_not_reached: AHashSet<(isize, isize)> = Default::default();
 
         previous_not_reached.insert((0, 0));
 
         for i in 0..=n as isize {
-            let occulted: FxHashSet<_> = (0..=i)
+            let occulted: AHashSet<_> = (0..=i)
                 .flat_map(|k| [(k, i - k), (k, k - i), (-k, i - k), (-k, k - i)].into_iter())
                 .filter(|p| !self.is_rock(*p))
                 .filter(|(x, y)| {
@@ -242,7 +220,7 @@ impl Garden {
                 .collect();
             // println!("{i:2} occulted {occulted:?}");
 
-            let newly_reached: FxHashSet<_> = previous_not_reached
+            let newly_reached: AHashSet<_> = previous_not_reached
                 .iter()
                 .filter(|(x, y)| {
                     !self.is_rock((*x, *y))
@@ -266,30 +244,107 @@ impl Garden {
 
         (n + 1) * (n + 1) - self.count_rocks_by_steps(n) - not_reached.len()
     }
+}
 
-    /// compute the count knowing that it takes `pediod` to cross a square both horizontally and vertically
+/// Inner class to compute the time a tile is reached without looping
+/// compute here are based on the fact that the garden square :
+/// * is surrounded with empty tiles
+/// * presents direct empty path from center to all its edges
+/// this implies that he time to reach a tile is derivable from the garden size (period)
+/// and from the time to reach one off the inner tiles
+struct BaseReachCounter {
+    period: isize,
+    max_offset: isize,
+    first_reached: Vec<usize>,
+}
+impl BaseReachCounter {
+    fn new(garden: &Garden) -> Self {
+        let period = garden.period;
+        let n = 3 * period;
+        let offset = n / 2;
+        assert_eq!(n, 2 * offset + 1);
+
+        let mut rank_reached: AHashMap<(isize, isize), isize> = Default::default();
+        let mut cur_pos: Vec<(isize, isize)> = vec![(0, 0)];
+        for k in 0..n {
+            cur_pos =
+                cur_pos.into_iter().flat_map(|p| garden.step(p).into_iter()).unique().collect();
+            for (x, y) in &cur_pos {
+                rank_reached.entry((*x, *y)).or_insert(k + 1);
+            }
+        }
+
+        let mut first_reached = vec![0usize; (n as usize + 1) * (n as usize + 1)];
+
+        for x in -offset..=offset {
+            for y in -offset..=offset {
+                if let Some(rr) = rank_reached.get(&(x, y)) {
+                    let index: usize = ((y + offset) * n + x + offset) as usize;
+                    // println!("({x}, {y}) : storing {rr} at {index}");
+                    first_reached[index] = *rr as usize;
+                }
+            }
+        }
+
+        Self {
+            period,
+            max_offset: offset,
+            first_reached,
+        }
+    }
+
+    /// derive time to reach a tile from the time to reach the sibling inner tile
+    fn get_first_reached(&self, pos: (isize, isize)) -> Option<usize> {
+        let (x, y) = pos;
+        let period = self.period;
+        let edges_pos = period / 2;
+        let n = self.max_offset * 2 + 1;
+
+        let o = if x.abs() > edges_pos {
+            (x.abs() - edges_pos - 1) / period
+        } else {
+            0
+        };
+        let p = if y.abs() > edges_pos {
+            (y.abs() - edges_pos - 1) / period
+        } else {
+            0
+        };
+        let modx = x - x.signum() * o * period;
+        let mody = y - y.signum() * p * period;
+
+        let index = usize::try_from((mody + self.max_offset) * n + modx + self.max_offset).unwrap();
+
+        let base = self.first_reached[index];
+        let period: usize = period as usize;
+
+        if base != 0 {
+            Some(base + (o + p) as usize * period)
+        } else {
+            None
+        }
+    }
+}
+impl Garden {
+    /// compute the count knowing that it takes `period` to cross a square both horizontally and vertically
+    /// this allows to :
+    /// * directly count inner square as being full covered, thus directly counting there reachable tiles depending and their coordinates
+    /// * use a `BaseReachCounter` to derive time to reach any other tile
     fn opt_count_reachable_after_n_steps(&self, n: usize) -> usize {
         // println!("opt_count_reachable_after_n_steps({n})");
 
-        let base_time_to_reach = self.get_time_to_reach_base();
-        let bttr = &base_time_to_reach;
-        let full_reach_even = (self.min_p..self.max_p)
-            .flat_map(|y| {
-                (self.min_p..self.max_p).filter(move |x| {
-                    let v = bttr.get(&(*x, y)).copied().unwrap_or(0);
-                    v > 0 && v % 2 == 0
-                })
-            })
-            .count() as isize;
+        let time_to_reach_counter = BaseReachCounter::new(&self);
 
-        let full_reach_odd = (self.min_p..self.max_p)
-            .flat_map(|y| {
-                (self.min_p..self.max_p).filter(move |x| {
-                    let v = bttr.get(&(*x, y)).copied().unwrap_or(0);
-                    /*v > 0 && implicit */ v % 2 == 1
-                })
-            })
-            .count() as isize;
+        let bttr = &time_to_reach_counter;
+        let (full_reach_even, full_reach_odd) = (self.min_p..self.max_p)
+            .flat_map(|y| (self.min_p..self.max_p).map(move |x| (x, y)))
+            .fold((0, 0), |(even, odd), (x, y)| {
+                match bttr.get_first_reached((x, y)) {
+                    None => (even, odd),
+                    Some(p) if p.is_even() => (even + 1, odd),
+                    _ => (even, odd + 1),
+                }
+            });
         println!("full_reach_even {full_reach_even}, full_reach_odd {full_reach_odd}");
         let n = n as isize;
         let period = self.period;
@@ -320,58 +375,80 @@ impl Garden {
 
         println!("considering {k} square around origin sq");
 
-        let extra = (-n..=n) // TODO : direct count of this points, instead of enumerating them
+        let extra = (-n..=n)
             .into_par_iter()
-            .map(|y|
-
-
-                if  y.abs() >= k*period - period/2 {
-                    (-n+y.abs()..=n-y.abs()).step_by(2).filter(|x|Self::get_reachable(&base_time_to_reach, n, period, edges_pos, k,(*x, y))).count()
-                }
-                else {
+            .map(|y| {
+                if y.abs() >= k * period - period / 2 {
+                    (-n + y.abs()..=n - y.abs())
+                        .step_by(2)
+                        .filter(|x| {
+                            Self::get_reachable(
+                                &time_to_reach_counter,
+                                k * period,
+                                n as usize,
+                                (*x, y),
+                            )
+                        })
+                        .count()
+                } else {
                     // from  [-n + i.abs() ..= n- i..abs()], we need only to cover
                     //  [-n + i.abs().. -l*period -period/2[  and ]l*period+period/2..n-i.abs()]
                     // where l = k - i/period
-                    let l = k - (y.abs()+period/2)/period;
-                    let min_r = l*period-period/2;
-                    let max_r = n-y.abs() ;
+                    let l = k - (y.abs() + period / 2) / period;
+                    let min_r = l * period - period / 2;
+                    let max_r = n - y.abs();
 
                     // we can inspect only every other value, but must be carefull about our start index
-                    let min_r = if (min_r+y.abs())%2 == n%2 {min_r}else{min_r+1};
-                    (-max_r ..= - min_r).step_by(2).filter(|x| Self::get_reachable(&base_time_to_reach, n, period, edges_pos, k,(*x, y))).count() +
-                        ( min_r ..= max_r).step_by(2).filter(|x| Self::get_reachable(&base_time_to_reach, n, period, edges_pos, k,(*x, y))).count()
-
+                    let min_r = if (min_r + y.abs()) % 2 == n % 2 {
+                        min_r
+                    } else {
+                        min_r + 1
+                    };
+                    (-max_r..=-min_r)
+                        .step_by(2)
+                        .filter(|x| {
+                            Self::get_reachable(
+                                &time_to_reach_counter,
+                                k * period,
+                                n as usize,
+                                (*x, y),
+                            )
+                        })
+                        .count()
+                        + (min_r..=max_r)
+                            .step_by(2)
+                            .filter(|x| {
+                                Self::get_reachable(
+                                    &time_to_reach_counter,
+                                    k * period,
+                                    n as usize,
+                                    (*x, y),
+                                )
+                            })
+                            .count()
                 }
-)
+            })
             .sum::<usize>();
 
         extra + full_squares_count as usize
     }
-
-    // FIXME : proper refactor
-    fn get_reachable(base_time_to_reach: &FxHashMap<(isize, isize), isize>, n: isize, period: isize, edges_pos: isize, k: isize, pos :(isize,isize)) ->  bool {
-        let (x,y)=pos;
-            (x.abs() + edges_pos) / period + (y.abs() + edges_pos) / period >= k && {
-                let o = if x.abs() > edges_pos {
-                    (x.abs() - edges_pos - 1) / period
-                } else {
-                    0
-                };
-                let p = if y.abs() > edges_pos {
-                    (y.abs() - edges_pos - 1) / period
-                } else {
-                    0
-                };
-                let modx = x - x.signum() * o * period;
-                let mody = y - y.signum() * p * period;
-                base_time_to_reach
-                    .get(&(modx, mody))
-                    .map(|r| *r + o * period + p * period)
-                    .map(|v| v.abs() <= n && v.abs() % 2 == n % 2)
-                    .unwrap_or(false)
-            }
+    fn get_reachable(
+        time_to_reach_counter: &BaseReachCounter,
+        min_distance: isize,
+        n: usize,
+        pos: (isize, isize),
+    ) -> bool {
+        let (x, y) = pos;
+        let period = time_to_reach_counter.period;
+        let edge_pos = period / 2;
+        (x.abs() + edge_pos) + (y.abs() + edge_pos) >= min_distance
+            && time_to_reach_counter
+                .get_first_reached(pos)
+                .map(|v| v <= n && v % 2 == n % 2)
+                .unwrap_or(false)
     }
 }
+
 pub fn walk_exercise() {
     let garden: Garden = include_str!("../resources/day21_garden.txt").parse().unwrap();
     garden.naive_pos_after_n_steps(garden.period as usize);
@@ -386,17 +463,15 @@ pub fn walk_exercise() {
 mod tests {
     use super::*;
     use indoc::indoc;
-
+    use plotters::define_color;
 
     fn naive_count_rocks(garden: &Garden, n: usize) -> usize {
-
         let n = n as isize;
-        // let's cover the entier square, but only considering checker which are compatible with n, ie which rack is of same parity
+        // let's cover the entier square, but only considering tiles which are compatible with n, ie which rack is of same parity
         (-n..=n)
             .map(|i|
                 // we need only to cover -n + i.abs() ..= n- i..abs()
-                (-n+i.abs()..=n-i.abs()).step_by(2).filter(|j|garden.is_rock((i,*j))).count()
-            )
+                (-n+i.abs()..=n-i.abs()).step_by(2).filter(|j|garden.is_rock((i,*j))).count())
             .sum::<usize>()
     }
 
@@ -415,10 +490,10 @@ mod tests {
             .##..##.##.
             ...........
         "}
-            .parse()
-            .unwrap();
+        .parse()
+        .unwrap();
 
-        for i in (0..garden.period as usize *30).step_by(10) {
+        for i in (0..garden.period as usize * 30).step_by(10) {
             assert_eq!(
                 naive_count_rocks(&garden, i),
                 garden.count_rocks_by_steps(i),
@@ -427,7 +502,7 @@ mod tests {
         }
     }
 
-        #[test]
+    #[test]
     fn aoc_example_works() {
         let garden: Garden = indoc! {"
             .......
@@ -440,7 +515,13 @@ mod tests {
         "}
         .parse()
         .unwrap();
-        for l in [10, 19, 200] {
+        for l in [1, 2, 3, 10, 19, 200] {
+            assert_eq!(
+                garden.count_reachable_after_n_steps(l),
+                garden.opt_count_reachable_after_n_steps(l),
+                "counts don't match for {l}"
+            );
+
             assert_eq!(
                 garden.naive_pos_after_n_steps(l),
                 garden.opt_count_reachable_after_n_steps(l),
@@ -499,11 +580,13 @@ mod tests {
     }
 }
 
+#[cfg(graph)]
 use plotters::prelude::*;
 
 /// draw reachable(n) as a series of lines, one for each value %garden.period
 /// it indeed appears to be polinomial if values are sampled every garden.period
 /// (which was not obvious for me when there was some rocks)
+#[cfg(graph)]
 #[test]
 fn draw_counts() -> eyre::Result<()> {
     #[cfg(debug_assertions)]

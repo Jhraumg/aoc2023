@@ -12,8 +12,8 @@ itertools = "*"
 indoc = { version = "2.0.4", features = [] }
 num = { version = "0.4.1", features = [] }
 rayon = "1.8.0"
-fxhash = "0.2.1"
 plotters = "0.3.5"
+ahash = "0.8.7"
 
 [profile.toto]
 inherits = "release"

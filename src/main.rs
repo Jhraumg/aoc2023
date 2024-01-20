@@ -24,8 +24,6 @@ mod day7;
 mod day8;
 mod day9;
 
-
-
 use std::time::{Duration, Instant};
 
 use itertools::Itertools;
@@ -47,15 +45,9 @@ impl Timer {
         static ONE_SECOND: Duration = Duration::from_secs(1);
         let elapsed = self.last.elapsed();
         if elapsed > ONE_SECOND {
-            println!(
-                "{}\n",
-                format!("*** {} s ***", elapsed.as_secs())
-            );
+            println!("{}\n", format!("*** {} s ***", elapsed.as_secs()));
         } else {
-            println!(
-                "{}\n",
-                format!("*** {} ms ***", elapsed.as_millis())
-            );
+            println!("{}\n", format!("*** {} ms ***", elapsed.as_millis()));
         }
 
         self.last = Instant::now();
@@ -68,7 +60,6 @@ impl Timer {
         );
     }
 }
-
 
 fn main() {
     let mut timer = Timer::new();
@@ -154,7 +145,7 @@ fn main() {
     timer.click();
 
     println!("*** day21 ***");
-    // takes >1 mn
+    // takes >30s...
     day21::walk_exercise();
     timer.click();
 
@@ -174,7 +165,6 @@ fn main() {
     // takes >1mn...
     day25::fix_machine();
     timer.click();
-
 
     timer.display_total();
 }

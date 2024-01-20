@@ -1,18 +1,18 @@
-use fxhash::{FxHashMap, FxHashSet};
+use ahash::{AHashMap, AHashSet};
 use itertools::Itertools;
 
-fn read_connection<'i>(input: &'i str) -> FxHashMap<&'i str, FxHashSet<&'i str>> {
-    let mut result: FxHashMap<_, _> = input
+fn read_connection<'i>(input: &'i str) -> AHashMap<&'i str, AHashSet<&'i str>> {
+    let mut result: AHashMap<_, _> = input
         .lines()
         .map(|l| {
             let (from, tos) = l.split_once(':').unwrap();
             let from = from.trim();
-            let tos: FxHashSet<_> =
+            let tos: AHashSet<_> =
                 tos.split(' ').map(|name| name.trim()).filter(|n| !n.is_empty()).collect();
             (from, tos)
         })
         .collect();
-    let transpose: FxHashMap<&'i str, FxHashSet<&'i str>> = result
+    let transpose: AHashMap<&'i str, AHashSet<&'i str>> = result
         .iter()
         .flat_map(|(from, tos)| tos.iter().map(move |to| (*to, *from)))
         .fold(Default::default(), |mut acc, (to, from)| {
@@ -35,15 +35,15 @@ fn read_connection<'i>(input: &'i str) -> FxHashMap<&'i str, FxHashSet<&'i str>>
     }
     result
 }
-fn prod_groups(connections: &FxHashMap<&str, FxHashSet<&str>>) -> (usize, usize) {
+fn prod_groups(connections: &AHashMap<&str, AHashSet<&str>>) -> (usize, usize) {
     let mut count = 0;
     let mut prod = 1;
-    let mut keys: FxHashSet<_> = connections.keys().copied().collect();
+    let mut keys: AHashSet<_> = connections.keys().copied().collect();
     while !keys.is_empty() {
         let key = keys.iter().next().copied().unwrap();
-        let mut group: FxHashSet<_> = [key].into_iter().collect();
+        let mut group: AHashSet<_> = [key].into_iter().collect();
         loop {
-            let new_group: FxHashSet<_> = group
+            let new_group: AHashSet<_> = group
                 .iter()
                 .flat_map(|k| connections.get(k).unwrap().iter().copied())
                 .filter(|c| !group.contains(c))
@@ -62,17 +62,17 @@ fn prod_groups(connections: &FxHashMap<&str, FxHashSet<&str>>) -> (usize, usize)
     (count, prod)
 }
 fn distance(
-    connections: &FxHashMap<&str, FxHashSet<&str>>,
+    connections: &AHashMap<&str, AHashSet<&str>>,
     start: &str,
     stop: &str,
 ) -> Option<usize> {
-    let mut visited: FxHashSet<&str> = Default::default();
+    let mut visited: AHashSet<&str> = Default::default();
     visited.reserve(connections.len());
     let mut d = 0usize;
     visited.insert(start);
-    let mut current: FxHashSet<_> = [start].into_iter().collect();
+    let mut current: AHashSet<_> = [start].into_iter().collect();
     loop {
-        let next: FxHashSet<_> = current
+        let next: AHashSet<_> = current
             .iter()
             .flat_map(|c| connections.get(c).unwrap().iter().filter(|o| !visited.contains(*o)))
             .copied()
@@ -94,7 +94,7 @@ fn distance(
 }
 
 fn distance_without_direct_link(
-    connections: &FxHashMap<&str, FxHashSet<&str>>,
+    connections: &AHashMap<&str, AHashSet<&str>>,
     start: &str,
     stop: &str,
 ) -> Option<usize> {
@@ -104,7 +104,7 @@ fn distance_without_direct_link(
     distance(&cc, start, stop)
 }
 
-fn split_in_two(connections: &FxHashMap<&str, FxHashSet<&str>>) -> usize {
+fn split_in_two(connections: &AHashMap<&str, AHashSet<&str>>) -> usize {
     // targeting segments which egdes are the most far appart when the segment is removed
     // TODO : try to count which segment belongs to the shortest path between edges could succeed without looping
     let mut cc = connections.clone();

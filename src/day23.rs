@@ -1,5 +1,5 @@
 use eyre::{eyre, Error};
-use fxhash::{FxHashMap, FxHashSet};
+use ahash::{AHashMap, AHashSet};
 use itertools::Itertools;
 use std::fmt::{Display, Formatter};
 use std::str::FromStr;
@@ -41,7 +41,7 @@ struct Map<const SLIPPERY: bool> {
 
 #[derive(Debug)]
 struct OrientedGraph {
-    distances: FxHashMap<(usize, usize), Vec<((usize, usize), usize)>>,
+    distances: AHashMap<(usize, usize), Vec<((usize, usize), usize)>>,
 }
 impl Display for OrientedGraph {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
@@ -120,7 +120,7 @@ impl<const SLIPPERY: bool> Map<SLIPPERY> {
     }
 
     fn build_oriented_graph(&self) -> OrientedGraph {
-        let crosses: FxHashSet<_> = (0..self.tiles.len())
+        let crosses: AHashSet<_> = (0..self.tiles.len())
             .flat_map(|y| (0..self.tiles[0].len()).map(move |x| (x, y)))
             .filter(|(x, y)| {
                 self.raw_step((*x, *y)).into_iter().filter(|p| self.walkable(*p)).count() > 2
@@ -199,7 +199,7 @@ impl<const SLIPPERY: bool> Map<SLIPPERY> {
             }
 
             // TODO : mutates visited on backtrack to avoid rebuilding it each time ?
-            let visited: FxHashSet<(usize, usize)> =
+            let visited: AHashSet<(usize, usize)> =
                 alternatives.iter().map(|alt| alt.src).collect();
             // println!("CURRENT {current:?}, visited {}, alternatives {}", visited.len(), alternatives.len());
 
