@@ -1,7 +1,8 @@
 use eyre::{eyre, Error};
-use ahash::{AHashMap, AHashSet};
+use ahash::{AHashMap};
 use itertools::Itertools;
 use std::fmt::{Display, Formatter};
+use std::ops::Index;
 use std::str::FromStr;
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
@@ -36,7 +37,9 @@ impl Tile {
 struct Map<const SLIPPERY: bool> {
     start: (usize, usize),
     end: (usize, usize),
-    tiles: Vec<Vec<Tile>>,
+    row_len: usize,
+    row_count:usize,
+    tiles: Vec<Tile>,
 }
 
 #[derive(Debug)]
@@ -68,6 +71,8 @@ impl<const SLIPPERY: bool> FromStr for Map<SLIPPERY> {
             .lines()
             .map(|l| l.chars().filter_map(|c| Tile::from_char(c).ok()).collect())
             .collect();
+        
+        let row_len = tiles[0].len();
         let start = (
             tiles[0].iter().enumerate().find(|(_, t)| **t == Tile::Path).unwrap().0,
             0,
@@ -77,17 +82,25 @@ impl<const SLIPPERY: bool> FromStr for Map<SLIPPERY> {
             tiles[endy].iter().enumerate().find(|(_, t)| **t == Tile::Path).unwrap().0,
             endy,
         );
+        
+        let tiles = tiles.into_iter().flat_map(|r|r.into_iter()).collect();
         if SLIPPERY {
-            Ok(Self { start, end, tiles })
+            Ok(Self { start, end, tiles, row_len, row_count : endy+1 })
         } else {
             let tiles = tiles
                 .into_iter()
-                .map(|l| {
-                    l.into_iter().map(|t| if Tile::Forest == t { t } else { Tile::Path }).collect()
-                })
-                .collect();
-            Ok(Self { start, end, tiles })
+                .map(|t| if Tile::Forest == t { t } else { Tile::Path }).collect();
+            Ok(Self { start, end, tiles, row_len , row_count : endy+1})
         }
+    }
+}
+
+impl <const SLIPPERY: bool> Index<(usize,usize)> for Map<SLIPPERY> {
+    type Output = Tile;
+
+    fn index(&self, index: (usize, usize)) -> &Self::Output {
+        let (col,row)=index;
+        &self.tiles[row*self.row_len +col]
     }
 }
 
@@ -120,8 +133,8 @@ impl<const SLIPPERY: bool> Map<SLIPPERY> {
     }
 
     fn build_oriented_graph(&self) -> OrientedGraph {
-        let crosses: AHashSet<_> = (0..self.tiles.len())
-            .flat_map(|y| (0..self.tiles[0].len()).map(move |x| (x, y)))
+        let crosses: Vec<_> = (0..self.row_count)
+            .flat_map(|y| (0..self.row_len).map(move |x| (x, y)))
             .filter(|(x, y)| {
                 self.raw_step((*x, *y)).into_iter().filter(|p| self.walkable(*p)).count() > 2
             })
@@ -145,7 +158,7 @@ impl<const SLIPPERY: bool> Map<SLIPPERY> {
 
     fn walkable(&self, pos: (usize, usize)) -> bool {
         let (x, y) = pos;
-        x < self.tiles[0].len() && y < self.tiles.len() && self.tiles[y][x] != Tile::Forest
+        x < self.row_len && y < self.row_count && self[pos] != Tile::Forest
     }
     fn raw_step(&self, pos: (usize, usize)) -> Vec<(usize, usize)> {
         if pos == self.start {
@@ -153,7 +166,7 @@ impl<const SLIPPERY: bool> Map<SLIPPERY> {
         } else {
             // there's a wall of forest, hence no need to check for limits (except start)
             let (x, y) = pos;
-            match self.tiles[y][x] {
+            match self[pos] {
                 Tile::Path => {
                     vec![(x - 1, y), (x, y + 1), (x + 1, y), (x, y - 1)]
                 }
@@ -199,18 +212,10 @@ impl<const SLIPPERY: bool> Map<SLIPPERY> {
             }
 
             // TODO : mutates visited on backtrack to avoid rebuilding it each time ?
-            let visited: AHashSet<(usize, usize)> =
+            let visited: Vec<(usize, usize)> =
                 alternatives.iter().map(|alt| alt.src).collect();
             // println!("CURRENT {current:?}, visited {}, alternatives {}", visited.len(), alternatives.len());
 
-            // FAST exit (not really efficient)
-            let max_path_len_from_current = current_len
-                + graph
-                    .distances
-                    .iter()
-                    .filter(|(k, _)| **k == current || !visited.contains(*k))
-                    .filter_map(|(_, v)| v.iter().map(|(_, d)| *d).max())
-                    .sum::<usize>();
 
             let next = graph
                 .distances
@@ -218,7 +223,7 @@ impl<const SLIPPERY: bool> Map<SLIPPERY> {
                 .map(|v| v.iter().filter(|(n, _)| !visited.contains(n)).collect_vec())
                 .unwrap_or(EMPTY);
 
-            if max_path_len_from_current > max_path && !next.is_empty() {
+            if !next.is_empty() {
                 let alt = Alternative {
                     src: current,
                     alts: next[1..].iter().map(|(n, d)| (*n, current_len + d)).collect(),
