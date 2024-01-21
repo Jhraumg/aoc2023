@@ -1,5 +1,6 @@
 use ahash::{AHashMap, AHashSet};
 use itertools::Itertools;
+use rayon::prelude::*;
 
 fn read_connection<'i>(input: &'i str) -> AHashMap<&'i str, AHashSet<&'i str>> {
     let mut result: AHashMap<_, _> = input
@@ -105,22 +106,24 @@ fn distance_without_direct_link(
 }
 
 fn split_in_two(connections: &AHashMap<&str, AHashSet<&str>>) -> usize {
-    // targeting segments which egdes are the most far appart when the segment is removed
-    // TODO : try to count which segment belongs to the shortest path between edges could succeed without looping
+    // targeting segments which egdes are the most far appart when the segment itself is removed
     let mut cc = connections.clone();
     for _ in 0..3 {
-        // getting all 3 at once work for the actual data, not for the test
         if let Some((k, o)) = cc
             .iter()
             .flat_map(|(k, v)| v.iter().map(|o| (*k, *o)))
-            .sorted_by(|(k1, o1), (k2, o2)| {
-                distance_without_direct_link(&cc, k2, o2)
-                    .unwrap_or(usize::MAX)
-                    .cmp(&distance_without_direct_link(&cc, k1, o1).unwrap_or(usize::MAX))
+            .par_bridge()
+            .fold(||(0,None),|(d,edge),(k,o)|{
+                let new_d = distance_without_direct_link(&cc,k,o ).unwrap_or(usize::MAX);
+                if  new_d > d {
+                    (new_d,Some((k,o)))
+                }else{
+                    (d,edge)
+                }
             })
-            .next()
+            .reduce(||(0,None), |(d1,e1),(d2,e2)|if d1 >d2 {(d1,e1)}else{(d2,e2)})
+            .1
         {
-            // println!("removing {k}-{o}");
             cc.get_mut(k).unwrap().remove(o);
             cc.get_mut(o).unwrap().remove(k);
         }
