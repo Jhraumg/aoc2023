@@ -1,5 +1,4 @@
 use ahash::{AHashMap, AHashSet};
-use itertools::Itertools;
 use rayon::prelude::*;
 
 fn read_connection<'i>(input: &'i str) -> AHashMap<&'i str, AHashSet<&'i str>> {

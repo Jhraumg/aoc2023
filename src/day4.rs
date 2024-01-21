@@ -1,11 +1,11 @@
 use eyre::{eyre, Error};
 use std::cmp::min;
-use std::collections::HashSet;
+use ahash::AHashSet;
 use std::str::FromStr;
 
 struct CardsGame {
     wins: Vec<Vec<u32>>,
-    values: Vec<HashSet<u32>>,
+    values: Vec<AHashSet<u32>>,
 }
 
 impl FromStr for CardsGame {
@@ -13,7 +13,7 @@ impl FromStr for CardsGame {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let mut wins: Vec<Vec<u32>> = vec![];
-        let mut values: Vec<HashSet<u32>> = vec![];
+        let mut values: Vec<AHashSet<u32>> = vec![];
 
         for l in s.lines() {
             let (_card, str_values) =

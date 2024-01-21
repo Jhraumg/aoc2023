@@ -1,15 +1,15 @@
 use itertools::Itertools;
-use std::collections::HashSet;
+use ahash::AHashSet;
 use std::str::FromStr;
 
 struct Sky<const F: usize> {
-    galaxies: HashSet<(usize, usize)>,
+    galaxies: AHashSet<(usize, usize)>,
 }
 impl<const F: usize> FromStr for Sky<F> {
     type Err = ();
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let mut galaxies: HashSet<_> = s
+        let mut galaxies: AHashSet<_> = s
             .lines()
             .filter(|l| !l.is_empty())
             .enumerate()

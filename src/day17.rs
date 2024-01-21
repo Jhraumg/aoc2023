@@ -1,6 +1,6 @@
 use itertools::Itertools;
 use std::cmp::min;
-use std::collections::HashMap;
+use ahash::AHashMap;
 use std::fmt::{Display, Formatter, Write};
 use std::str::FromStr;
 
@@ -244,7 +244,7 @@ fn get_minimal_heat_loss(heatloss_map: &[Vec<usize>], min_len: usize, max_len: u
         l: 42,
     };
 
-    let mut moves_to_minimal_loss: HashMap<Move, usize> = HashMap::with_capacity(maxx * maxy * 4);
+    let mut moves_to_minimal_loss: AHashMap<Move, usize> = AHashMap::with_capacity(maxx * maxy * 4);
 
     let mut current_moves: Vec<_> = get_next_moves(
         heatloss_map,

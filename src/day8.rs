@@ -1,5 +1,5 @@
 use num::integer::lcm;
-use std::collections::HashMap;
+use ahash::AHashMap;
 use std::hash::Hash;
 
 #[derive(Debug, Clone, Copy)]
@@ -19,7 +19,7 @@ struct Node {
 // starts and end indexes would be indexes too
 struct Map {
     directions: Vec<Direction>,
-    nodes: HashMap<&'static str, Node>,
+    nodes: AHashMap<&'static str, Node>,
 }
 impl Map {
     pub fn new(input: &'static str) -> Self {
@@ -35,7 +35,7 @@ impl Map {
             })
             .collect();
 
-        let nodes: HashMap<&'static str, Node> =
+        let nodes: AHashMap<&'static str, Node> =
             lines.filter(|l| !l.is_empty()).map(to_node).map(|n| (n.name, n)).collect();
 
         Self { directions, nodes }
@@ -78,7 +78,7 @@ fn ghost_path_len(input: &'static str) -> u64 {
     let revolving_paths: Vec<(Vec<&'static str>, usize)> = start_nodes
         .map(|n| {
             let mut current_node = n;
-            let mut steps_by_node: HashMap<&'static str, Vec<usize>> = HashMap::new();
+            let mut steps_by_node: AHashMap<&'static str, Vec<usize>> = AHashMap::new();
             let mut steps = vec![];
             for len in 0usize.. {
                 let dir = directions[len % dir_len];

@@ -1,6 +1,6 @@
 use eyre::{eyre, Error};
 use num::Integer;
-use std::collections::HashSet;
+use ahash::AHashSet;
 use std::str::FromStr;
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
@@ -192,8 +192,8 @@ impl Map {
         unreachable!()
     }
 
-    pub fn get_loop(&self) -> (HashSet<(usize, usize)>, u64) {
-        let mut pipe_loop: HashSet<(usize, usize)> = HashSet::with_capacity(self.hlen * self.vlen);
+    pub fn get_loop(&self) -> (AHashSet<(usize, usize)>, u64) {
+        let mut pipe_loop: AHashSet<(usize, usize)> = AHashSet::with_capacity(self.hlen * self.vlen);
         let mut new_neighbours: Vec<(usize, usize)> = vec![self.start];
         let mut dist = 0;
 

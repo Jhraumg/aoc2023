@@ -1,5 +1,5 @@
 use crate::day14::Axis::{Horizontal, Vertical};
-use std::collections::HashMap;
+use ahash::AHashMap;
 use std::fmt::{Display, Formatter, Write};
 use std::str::FromStr;
 
@@ -163,7 +163,7 @@ impl Scene {
         result
     }
     fn tune(&mut self) {
-        let mut previous: HashMap<Vec<[usize; 2]>, usize> = HashMap::new();
+        let mut previous: AHashMap<Vec<[usize; 2]>, usize> = AHashMap::new();
 
         previous.insert(self.rounded.to_vec(), 0);
 

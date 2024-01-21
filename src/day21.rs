@@ -1,7 +1,6 @@
 use ahash::{AHashMap, AHashSet};
 use num::Integer;
 use rayon::prelude::*;
-use std::collections::HashMap;
 use std::str::FromStr;
 use itertools::Itertools;
 
@@ -79,7 +78,7 @@ impl Garden {
         self.rocks[x + y * self.period as usize]
     }
     fn naive_pos_after_n_steps(&self, n: usize) -> usize {
-        let mut rank_reached: HashMap<(isize, isize), usize> = HashMap::new();
+        let mut rank_reached: AHashMap<(isize, isize), usize> = AHashMap::new();
         let mut cur_pos: Vec<(isize, isize)> = vec![(0, 0)];
         for k in 0..n {
             cur_pos = cur_pos.into_iter().flat_map(|p| self.step(p).into_iter()).unique().collect();
@@ -333,7 +332,7 @@ impl Garden {
     fn opt_count_reachable_after_n_steps(&self, n: usize) -> usize {
         // println!("opt_count_reachable_after_n_steps({n})");
 
-        let time_to_reach_counter = BaseReachCounter::new(&self);
+        let time_to_reach_counter = BaseReachCounter::new(self);
 
         let bttr = &time_to_reach_counter;
         let (full_reach_even, full_reach_odd) = (self.min_p..self.max_p)

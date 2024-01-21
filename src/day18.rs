@@ -2,7 +2,7 @@ use eyre::{eyre, Error};
 use itertools::Itertools;
 use num::Integer;
 use std::cmp::{max, min};
-use std::collections::HashSet;
+use ahash::AHashSet;
 use std::str::FromStr;
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
@@ -141,7 +141,7 @@ impl<const COLOR_FIRST: bool> Trench<COLOR_FIRST> {
             .collect_vec();
 
         let mut area = 0;
-        let mut rectangles_in: HashSet<(usize, usize)> = HashSet::new();
+        let mut rectangles_in: AHashSet<(usize, usize)> = AHashSet::new();
         for (j, (y1, y2)) in lines_y.iter().copied().tuple_windows().enumerate() {
             for (i, (x1, x2)) in column_x.iter().copied().tuple_windows().enumerate() {
                 let column_before = self

@@ -1,6 +1,6 @@
 use itertools::Itertools;
 use std::cmp::Ordering;
-use std::collections::HashMap;
+use ahash::AHashMap;
 
 // Fixme : derive PartialOrd instead
 #[repr(u8)]
@@ -62,7 +62,7 @@ fn to_cards(input: &str) -> [Card; 5] {
     result
 }
 fn get_type(cards: &[Card; 5]) -> CardType {
-    let mut counts: HashMap<Card, usize> = HashMap::new();
+    let mut counts: AHashMap<Card, usize> = AHashMap::new();
     for c in cards {
         *counts.entry(*c).or_default() += 1;
     }
@@ -89,7 +89,7 @@ fn get_type(cards: &[Card; 5]) -> CardType {
 }
 
 fn get_type_with_jokers(cards: &[Card; 5]) -> CardType {
-    let mut counts: HashMap<Card, usize> = HashMap::new();
+    let mut counts: AHashMap<Card, usize> = AHashMap::new();
     for c in cards {
         *counts.entry(*c).or_default() += 1;
     }

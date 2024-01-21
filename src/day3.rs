@@ -1,5 +1,5 @@
 use eyre::{eyre, Error};
-use std::collections::HashSet;
+use ahash::AHashSet;
 use std::str::FromStr;
 
 #[derive(Debug, Clone, Copy, Hash, Eq, PartialEq)]
@@ -102,7 +102,7 @@ impl FromStr for EngineSchema {
 }
 
 impl EngineSchema {
-    fn get_adjacent_symbol<F>(&self, s: &EngineSymbol, adj_filter: F) -> HashSet<EngineSymbol>
+    fn get_adjacent_symbol<F>(&self, s: &EngineSymbol, adj_filter: F) -> AHashSet<EngineSymbol>
     where
         F: Fn(&EngineSymbol) -> bool,
     {

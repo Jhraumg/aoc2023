@@ -1,6 +1,7 @@
 use itertools::Itertools;
 use std::cmp::{max, min};
 use std::str::FromStr;
+use rayon::prelude::*;
 
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
 struct Brick {
@@ -105,6 +106,7 @@ impl Stack {
         self.bricks
             .iter()
             .enumerate()
+            .par_bridge()
             .map(|(i, init)| {
                 let mut falling = vec![false; self.bricks.len()];
                 falling[i] = true;

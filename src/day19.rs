@@ -1,6 +1,6 @@
 use itertools::Itertools;
 use std::cmp::{max, min};
-use std::collections::HashMap;
+use ahash::AHashMap;
 use std::iter::once;
 use std::str::FromStr;
 
@@ -64,7 +64,7 @@ impl Instruction {
 }
 
 struct Filter {
-    workflows: HashMap<String, Vec<Instruction>>,
+    workflows: AHashMap<String, Vec<Instruction>>,
 }
 impl FromStr for Filter {
     type Err = ();
