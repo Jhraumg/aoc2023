@@ -1,6 +1,6 @@
+use ahash::AHashMap;
 use itertools::Itertools;
 use std::cmp::Ordering;
-use ahash::AHashMap;
 
 // Fixme : derive PartialOrd instead
 #[repr(u8)]

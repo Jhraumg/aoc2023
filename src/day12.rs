@@ -33,25 +33,25 @@ fn count_max_damaged_seq_fitting(damaged: &[usize], gap_len: usize) -> usize {
 }
 
 fn compute_matches(record: &str, damaged: &[usize]) -> usize {
-    inner_compute_matches(record.as_bytes(),damaged)
+    inner_compute_matches(record.as_bytes(), damaged)
 }
 
-const OK:u8 = b'.';
-const ANY:u8 = b'?';
-const DMG:u8 = b'#';
+const OK: u8 = b'.';
+const ANY: u8 = b'?';
+const DMG: u8 = b'#';
 
 fn inner_compute_matches(record: &[u8], damaged: &[usize]) -> usize {
     // let's trim record from its OK chars
     let forced_ok = record.iter().take_while(|c| **c == OK).count();
     let record = &record[forced_ok..];
-    let forced_ok = record.iter().rev().take_while(|c| **c == OK ).count();
+    let forced_ok = record.iter().rev().take_while(|c| **c == OK).count();
     let record = &record[..record.len() - forced_ok];
     if minimum_len(damaged) > record.len() {
         return 0;
     }
 
     if damaged.is_empty() {
-        return if record.contains(&DMG) {0} else {1};
+        return if record.contains(&DMG) { 0 } else { 1 };
     }
 
     let leading_choices = record.iter().take_while(|c| **c == ANY).count();

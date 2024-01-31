@@ -1,5 +1,5 @@
-use eyre::{eyre, Error};
 use ahash::AHashSet;
+use eyre::{eyre, Error};
 use std::str::FromStr;
 
 #[derive(Debug, Clone, Copy, Hash, Eq, PartialEq)]

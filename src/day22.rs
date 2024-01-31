@@ -1,7 +1,7 @@
 use itertools::Itertools;
+use rayon::prelude::*;
 use std::cmp::{max, min};
 use std::str::FromStr;
-use rayon::prelude::*;
 
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
 struct Brick {

@@ -1,6 +1,6 @@
+use ahash::AHashMap;
 use itertools::Itertools;
 use std::cmp::min;
-use ahash::AHashMap;
 use std::fmt::{Display, Formatter, Write};
 use std::str::FromStr;
 
@@ -83,132 +83,84 @@ fn get_next_moves(
     let Move { x, y, dir, l } = current;
     match dir {
         Dir::North => [
-            if l < max_len && y > 0 {
-                Some(Move {
-                    x,
-                    y: y - 1,
-                    dir: Dir::North,
-                    l: l + 1,
-                })
-            } else {
-                None
-            },
-            if l >= min_len && x > 0 {
-                Some(Move {
-                    x: x - 1,
-                    y,
-                    dir: Dir::West,
-                    l: 1,
-                })
-            } else {
-                None
-            },
-            if l >= min_len && x + 1 < maxx {
-                Some(Move {
-                    x: x + 1,
-                    y,
-                    dir: Dir::East,
-                    l: 1,
-                })
-            } else {
-                None
-            },
+            (l < max_len && y > 0).then_some(Move {
+                x,
+                y: y - 1,
+                dir: Dir::North,
+                l: l + 1,
+            }),
+            (l >= min_len && x > 0).then_some(Move {
+                x: x - 1,
+                y,
+                dir: Dir::West,
+                l: 1,
+            }),
+            (l >= min_len && x + 1 < maxx).then_some(Move {
+                x: x + 1,
+                y,
+                dir: Dir::East,
+                l: 1,
+            }),
         ],
         Dir::West => [
-            if l < max_len && x > 0 {
-                Some(Move {
-                    x: x - 1,
-                    y,
-                    dir: Dir::West,
-                    l: l + 1,
-                })
-            } else {
-                None
-            },
-            if l >= min_len && y > 0 {
-                Some(Move {
-                    x,
-                    y: y - 1,
-                    dir: Dir::North,
-                    l: 1,
-                })
-            } else {
-                None
-            },
-            if l >= min_len && y + 1 < maxy {
-                Some(Move {
-                    x,
-                    y: y + 1,
-                    dir: Dir::South,
-                    l: 1,
-                })
-            } else {
-                None
-            },
+            (l < max_len && x > 0).then_some(Move {
+                x: x - 1,
+                y,
+                dir: Dir::West,
+                l: l + 1,
+            }),
+            (l >= min_len && y > 0).then_some(Move {
+                x,
+                y: y - 1,
+                dir: Dir::North,
+                l: 1,
+            }),
+            (l >= min_len && y + 1 < maxy).then_some(Move {
+                x,
+                y: y + 1,
+                dir: Dir::South,
+                l: 1,
+            }),
         ],
         Dir::South => [
-            if l < max_len && y + 1 < maxy {
-                Some(Move {
-                    x,
-                    y: y + 1,
-                    dir: Dir::South,
-                    l: l + 1,
-                })
-            } else {
-                None
-            },
-            if l >= min_len && x > 0 {
-                Some(Move {
-                    x: x - 1,
-                    y,
-                    dir: Dir::West,
-                    l: 1,
-                })
-            } else {
-                None
-            },
-            if l >= min_len && x + 1 < maxx {
-                Some(Move {
-                    x: x + 1,
-                    y,
-                    dir: Dir::East,
-                    l: 1,
-                })
-            } else {
-                None
-            },
+            (l < max_len && y + 1 < maxy).then_some(Move {
+                x,
+                y: y + 1,
+                dir: Dir::South,
+                l: l + 1,
+            }),
+            (l >= min_len && x > 0).then_some(Move {
+                x: x - 1,
+                y,
+                dir: Dir::West,
+                l: 1,
+            }),
+            (l >= min_len && x + 1 < maxx).then_some(Move {
+                x: x + 1,
+                y,
+                dir: Dir::East,
+                l: 1,
+            }),
         ],
         Dir::East => [
-            if l < max_len && x + 1 < maxx {
-                Some(Move {
-                    x: x + 1,
-                    y,
-                    dir: Dir::East,
-                    l: l + 1,
-                })
-            } else {
-                None
-            },
-            if l >= min_len && y > 0 {
-                Some(Move {
-                    x,
-                    y: y - 1,
-                    dir: Dir::North,
-                    l: 1,
-                })
-            } else {
-                None
-            },
-            if l >= min_len && y + 1 < maxy {
-                Some(Move {
-                    x,
-                    y: y + 1,
-                    dir: Dir::South,
-                    l: 1,
-                })
-            } else {
-                None
-            },
+            (l < max_len && x + 1 < maxx).then_some(Move {
+                x: x + 1,
+                y,
+                dir: Dir::East,
+                l: l + 1,
+            }),
+            (l >= min_len && y > 0).then_some(Move {
+                x,
+                y: y - 1,
+                dir: Dir::North,
+                l: 1,
+            }),
+            (l >= min_len && y + 1 < maxy).then_some(Move {
+                x,
+                y: y + 1,
+                dir: Dir::South,
+                l: 1,
+            }),
         ],
         Dir::StartStop => {
             if current.x == 0 && current.y == 0 {

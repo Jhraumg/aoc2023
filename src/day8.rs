@@ -1,5 +1,5 @@
-use num::integer::lcm;
 use ahash::AHashMap;
+use num::integer::lcm;
 use std::hash::Hash;
 
 #[derive(Debug, Clone, Copy)]
@@ -72,8 +72,7 @@ fn ghost_path_len(input: &'static str) -> u64 {
     let Map { directions, nodes } = Map::new(input);
     let dir_len = directions.len();
 
-    let start_nodes =
-        nodes.iter().filter_map(|(_, n)| if n.name.ends_with('A') { Some(n) } else { None });
+    let start_nodes = nodes.iter().filter_map(|(_, n)| n.name.ends_with('A').then_some(n));
 
     let revolving_paths: Vec<(Vec<&'static str>, usize)> = start_nodes
         .map(|n| {
@@ -111,7 +110,7 @@ fn ghost_path_len(input: &'static str) -> u64 {
             let end_indexes = steps
                 .into_iter()
                 .enumerate()
-                .filter_map(|(i, n)| if n.ends_with('Z') { Some(i) } else { None })
+                .filter_map(|(i, n)| n.ends_with('Z').then_some(i))
                 .collect();
             Path {
                 period,

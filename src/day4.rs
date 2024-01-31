@@ -1,6 +1,6 @@
+use ahash::AHashSet;
 use eyre::{eyre, Error};
 use std::cmp::min;
-use ahash::AHashSet;
 use std::str::FromStr;
 
 struct CardsGame {

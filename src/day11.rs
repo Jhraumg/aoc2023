@@ -1,5 +1,5 @@
-use itertools::Itertools;
 use ahash::AHashSet;
+use itertools::Itertools;
 use std::str::FromStr;
 
 struct Sky<const F: usize> {
@@ -14,10 +14,7 @@ impl<const F: usize> FromStr for Sky<F> {
             .filter(|l| !l.is_empty())
             .enumerate()
             .flat_map(|(j, l)| {
-                l.trim()
-                    .chars()
-                    .enumerate()
-                    .filter_map(move |(i, c)| if c == '#' { Some((i, j)) } else { None })
+                l.trim().chars().enumerate().filter_map(move |(i, c)| (c == '#').then_some((i, j)))
             })
             .collect();
 

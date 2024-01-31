@@ -112,15 +112,21 @@ fn split_in_two(connections: &AHashMap<&str, AHashSet<&str>>) -> usize {
             .iter()
             .flat_map(|(k, v)| v.iter().map(|o| (*k, *o)))
             .par_bridge()
-            .fold(||(0,None),|(d,edge),(k,o)|{
-                let new_d = distance_without_direct_link(&cc,k,o ).unwrap_or(usize::MAX);
-                if  new_d > d {
-                    (new_d,Some((k,o)))
-                }else{
-                    (d,edge)
-                }
-            })
-            .reduce(||(0,None), |(d1,e1),(d2,e2)|if d1 >d2 {(d1,e1)}else{(d2,e2)})
+            .fold(
+                || (0, None),
+                |(d, edge), (k, o)| {
+                    let new_d = distance_without_direct_link(&cc, k, o).unwrap_or(usize::MAX);
+                    if new_d > d {
+                        (new_d, Some((k, o)))
+                    } else {
+                        (d, edge)
+                    }
+                },
+            )
+            .reduce(
+                || (0, None),
+                |(d1, e1), (d2, e2)| if d1 > d2 { (d1, e1) } else { (d2, e2) },
+            )
             .1
         {
             cc.get_mut(k).unwrap().remove(o);

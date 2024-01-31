@@ -1,6 +1,6 @@
+use ahash::AHashMap;
 use itertools::Itertools;
 use std::cmp::{max, min};
-use ahash::AHashMap;
 use std::iter::once;
 use std::str::FromStr;
 

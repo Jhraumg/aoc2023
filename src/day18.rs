@@ -1,8 +1,8 @@
+use ahash::AHashSet;
 use eyre::{eyre, Error};
 use itertools::Itertools;
 use num::Integer;
 use std::cmp::{max, min};
-use ahash::AHashSet;
 use std::str::FromStr;
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
@@ -128,14 +128,14 @@ impl<const COLOR_FIRST: bool> Trench<COLOR_FIRST> {
         let lines_y = self
             .dug_edges
             .iter()
-            .filter_map(|((_, y1), (_, y2))| if *y1 == *y2 { Some(*y1) } else { None })
+            .filter_map(|((_, y1), (_, y2))| (*y1 == *y2).then_some(*y1))
             .sorted()
             .unique()
             .collect_vec();
         let column_x = self
             .dug_edges
             .iter()
-            .filter_map(|((x1, _), (x2, _))| if *x1 == *x2 { Some(*x1) } else { None })
+            .filter_map(|((x1, _), (x2, _))| (*x1 == *x2).then_some(*x1))
             .sorted()
             .unique()
             .collect_vec();

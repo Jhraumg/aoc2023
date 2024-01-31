@@ -46,26 +46,10 @@ impl FromStr for Scene {
         let maxy = chars.len();
         let maxx = chars[0].len();
         let rounded = (0..maxx)
-            .flat_map(|x| {
-                (0..maxy).filter_map(move |y| {
-                    if chars[y][x] == 'O' {
-                        Some([x, y])
-                    } else {
-                        None
-                    }
-                })
-            })
+            .flat_map(|x| (0..maxy).filter_map(move |y| (chars[y][x] == 'O').then_some([x, y])))
             .collect();
         let cubed = (0..maxx)
-            .flat_map(|x| {
-                (0..maxy).filter_map(move |y| {
-                    if chars[y][x] == '#' {
-                        Some([x, y])
-                    } else {
-                        None
-                    }
-                })
-            })
+            .flat_map(|x| (0..maxy).filter_map(move |y| (chars[y][x] == '#').then_some([x, y])))
             .collect();
 
         Ok(Self {
