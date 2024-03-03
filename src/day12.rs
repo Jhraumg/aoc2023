@@ -1,14 +1,15 @@
+use ahash::{HashMap, HashMapExt};
 use itertools::{repeat_n, Itertools};
-use rayon::prelude::*;
 use std::cmp::min;
 
 use num::integer::binomial;
 
-fn count_unfolded_matches(record: &str, damaged: &[usize]) -> usize {
+fn count_unfolded_matches<'a, 'b>(record: &'a str, damaged: &'b [usize]) -> usize {
     let record = repeat_n(record, 5).join("?");
     let damaged: Vec<_> = (0..5).flat_map(|_| damaged.iter()).copied().collect();
+    let mut memo = HashMap::new();
 
-    inner_compute_matches(record.as_bytes(), &damaged)
+    inner_compute_matches(&mut memo, record.as_bytes(), &damaged)
 }
 
 fn minimum_len(damaged: &[usize]) -> usize {
@@ -32,31 +33,40 @@ fn count_max_damaged_seq_fitting(damaged: &[usize], gap_len: usize) -> usize {
     result
 }
 
-fn compute_matches(record: &str, damaged: &[usize]) -> usize {
-    inner_compute_matches(record.as_bytes(), damaged)
+fn compute_matches<'a, 'b>(record: &'a  str, damaged: &'b [usize]) -> usize {
+    let mut memo = HashMap::new();
+    inner_compute_matches(&mut memo, record.as_bytes(), damaged)
 }
 
 const OK: u8 = b'.';
 const ANY: u8 = b'?';
 const DMG: u8 = b'#';
 
-fn inner_compute_matches(record: &[u8], damaged: &[usize]) -> usize {
+ fn inner_compute_matches<'a, 'b> (memo : &mut HashMap<(&'a[u8],&'b[usize]),usize>, record: &'a[u8], damaged: &'b[usize]) -> usize {
+
+    if let Some(result) = memo.get(&(record, damaged)) {
+        return *result;
+    }
     // let's trim record from its OK chars
     let forced_ok = record.iter().take_while(|c| **c == OK).count();
     let record = &record[forced_ok..];
     let forced_ok = record.iter().rev().take_while(|c| **c == OK).count();
     let record = &record[..record.len() - forced_ok];
     if minimum_len(damaged) > record.len() {
+        memo.insert((record,damaged), 0);
         return 0;
     }
 
     if damaged.is_empty() {
-        return if record.contains(&DMG) { 0 } else { 1 };
+        let result =  if record.contains(&DMG) { 0 } else { 1 };
+        memo.insert((record,damaged), result);
+        return result;
+
     }
 
     let leading_choices = record.iter().take_while(|c| **c == ANY).count();
     let next_no_choice = record[leading_choices..].first();
-    match next_no_choice {
+    let result = match next_no_choice {
         None => {
             let margin =record.len()- minimum_len(damaged);
             binomial(damaged.len()+margin,margin)
@@ -66,7 +76,7 @@ fn inner_compute_matches(record: &[u8], damaged: &[usize]) -> usize {
             let nb_damaged_max= count_max_damaged_seq_fitting(damaged, leading_choices);
              (0..=nb_damaged_max).map(|i| {
                 let margin = leading_choices - minimum_len(&damaged[0..i]);
-                binomial(i+margin,margin)*inner_compute_matches(&record[leading_choices+1..],&damaged[i..])
+                binomial(i+margin,margin)*inner_compute_matches(memo, &record[leading_choices+1..],&damaged[i..])
             }).sum()
         }
         _ /* DaMaGed */=> {
@@ -87,19 +97,21 @@ fn inner_compute_matches(record: &[u8], damaged: &[usize]) -> usize {
                     //if current_record.len()<current {return 0;}//not enough place
                     if current_record[..current].contains(&OK){return 0;} // some OK on damaged[i] place
 
-                    let solutions_before = if i==0 {1} else { inner_compute_matches(&record[..leading_choices.saturating_sub(reserved)], &damaged[..i]) };
+                    let solutions_before = if i==0 {1} else { inner_compute_matches(memo, &record[..leading_choices.saturating_sub(reserved)], &damaged[..i]) };
                     if current_record.len()==current { // no place after
                          if damaged.len()==i+1 {solutions_before} else { /* no place left for the remaining  damaged */ 0  }
                     }else if current_record[current..].starts_with(&[DMG]) {  0} // cannot have a '#' just after current
                     else {
-                        let solutions_after = inner_compute_matches(&current_record[current + 1..], &damaged[i + 1..]);
+                        let solutions_after = inner_compute_matches(memo, &current_record[current + 1..], &damaged[i + 1..]);
 
                         solutions_before * solutions_after
                     }
                 }).sum::<usize>()
             }).sum()
         }
-    }
+    };
+    memo.insert((record,damaged), result);
+    result
 }
 
 fn sum_arrangements(
@@ -110,7 +122,7 @@ fn sum_arrangements(
         .lines()
         .filter(|l| !l.is_empty())
         .enumerate()
-        .par_bridge()
+        // .par_bridge()
         .map(|(_i, l)| {
             let (record, damaged) = l.split_once(' ').unwrap();
             let damaged: Vec<usize> = damaged.split(',').filter_map(|g| g.parse().ok()).collect();
